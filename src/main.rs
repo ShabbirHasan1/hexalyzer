@@ -1,6 +1,8 @@
 use std::io;
+use std::io::Write;
 use std::fs;
 use std::ops::Range;
+use std::collections::{HashMap, BTreeMap};
 
 
 const RECORD_START: char = ':';
@@ -11,11 +13,12 @@ const BYTE_CHAR_LEN: usize = 2;
 const RECORD_CHKSUM_LEN: usize = BYTE_CHAR_LEN;
 
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 enum RecordType {
     Data,
     EndOfFile,
     ExtendedSegmentAddress,
+    StartSegmentAddress, // TODO: deprecate? Or allow to write with it?
     ExtendedLinearAddress,
     StartLinearAddress,
 }
@@ -26,6 +29,7 @@ impl RecordType {
             "00" => Ok(Self::Data),
             "01" => Ok(Self::EndOfFile),
             "02" => Ok(Self::ExtendedSegmentAddress),
+            "03" => Ok(Self::StartSegmentAddress),
             "04" => Ok(Self::ExtendedLinearAddress),
             "05" => Ok(Self::StartLinearAddress),
             _ => Err(io::Error::from(io::ErrorKind::InvalidData)),
@@ -40,10 +44,108 @@ struct Record {
     address: u16,
     rtype: RecordType,
     data: Vec<u8>,
-    checksum: u8
+    checksum: u8,
 }
 
 impl Record {
+    fn calculate_checksum(record: &str) -> u8 {
+        let hex_data: Result<Vec<u8>, _> = (0..record.len())
+            .step_by(BYTE_CHAR_LEN)
+            .map(|i| u8::from_str_radix(&record[i..i+BYTE_CHAR_LEN], 16))
+            .collect();
+        let mut sum: u8 = 0;
+        for &b in hex_data.unwrap().iter() { // TODO: handle Err
+            sum = sum.wrapping_add(b); // sum modulo 256
+        }
+        let checksum = (!sum).wrapping_add(1); // two's complement
+        checksum
+    }
+
+    fn create(address: u16, rtype: RecordType, data: &Vec<u8>) -> Result<String, io::Error> {
+        match rtype {
+            RecordType::Data => {
+                // Check for data length
+                let length = data.len();
+                if length > 16 {
+                    return Err(io::Error::from(io::ErrorKind::InvalidData));
+                }
+                // Create record string (data length, address and record type)
+                let mut record = String::from(&format!("{:02X}{:04X}00", length, address));
+                // Add data bytes
+                for byte in data {
+                    record.push_str(&format!("{:02X}", byte));
+                }
+                // Calculate checksum
+                let checksum = Self::calculate_checksum(&record);
+                // Complete the record with start symbol and checksum
+                record.insert(0, ':');
+                record.push_str(&format!("{:02X}", checksum));
+
+                Ok(record)
+            }
+            RecordType::EndOfFile => {
+                Ok(String::from(":00000001FF\n"))
+            }
+            RecordType::ExtendedLinearAddress => {
+                // Check for data length
+                let length = data.len();
+                if length != 2 {
+                    return Err(io::Error::from(io::ErrorKind::InvalidData));
+                }
+                // Check for address
+                if address != 0 {
+                    return Err(io::Error::from(io::ErrorKind::InvalidData));
+                }
+                // Create record string (data length, address and record type)
+                let mut record = String::from("02000004");
+                // Add data bytes
+                for byte in data {
+                    record.push_str(&format!("{:02X}", byte));
+                }
+                // Calculate checksum
+                let checksum = Self::calculate_checksum(&record);
+                // Complete the record with start symbol and checksum
+                record.insert(0, ':');
+                record.push_str(&format!("{:02X}", checksum));
+
+                Ok(record)
+            }
+            RecordType::StartLinearAddress | RecordType::StartSegmentAddress => {
+                // Check for data length
+                let length = data.len();
+                if length != 4 {
+                    return Err(io::Error::from(io::ErrorKind::InvalidData));
+                }
+                // Check for address
+                if address != 0 {
+                    return Err(io::Error::from(io::ErrorKind::InvalidData));
+                }
+                // Create record string (data length and address)
+                let mut record = String::from("040000");
+                // Add record type
+                if rtype == RecordType::StartLinearAddress {
+                    record.push_str("03")
+                } else {
+                    record.push_str("05")
+                }
+                // Add data bytes
+                for byte in data {
+                    record.push_str(&format!("{:02X}", byte));
+                }
+                // Calculate checksum
+                let checksum = Self::calculate_checksum(&record);
+                // Complete the record with start symbol and checksum
+                record.insert(0, ':');
+                record.push_str(&format!("{:02X}", checksum));
+
+                Ok(record)
+            }
+            RecordType::ExtendedSegmentAddress => {
+                Err(io::Error::from(io::ErrorKind::InvalidData)) // TODO: not supported
+            }
+        }
+    }
+
     fn parse(line: &str) -> Result<Self, io::Error> {
         // Check for start record
         if !line.starts_with(RECORD_START) {
@@ -97,9 +199,11 @@ impl Record {
 
 
 pub struct IntelHex {
-    filepath: String,
-    records: Vec<Record>,
-    size: usize, // TODO: implement
+    pub filepath: String,
+    pub size: usize, // TODO: implement
+    offset: usize,
+    start_addr: HashMap<RecordType, Vec<u8>>,
+    buffer: BTreeMap<usize, u8>,
 }
 
 impl IntelHex {
@@ -112,24 +216,52 @@ impl IntelHex {
     pub fn new() -> Self {
         Self {
             filepath: String::new(),
-            records: Vec::new(),
             size: 0,
+            offset: 0,
+            start_addr: HashMap::new(),
+            buffer: BTreeMap::new(),
         }
     }
 
     /// Parses the raw contents of the hex file and fills internal record vector.
     ///
-    fn parse(raw_contents: &str) -> Result<Vec<Record>, io::Error> {
-        let mut records: Vec<Record> = Vec::new();
+    fn parse(&mut self, raw_contents: &str) -> Result<(), io::Error> {
         //
         for (idx, line) in raw_contents.lines().enumerate() {
             let r = match Record::parse(line) {
                 Ok(rec) => rec,
                 Err(e) => return Err(e)
             };
-            records.push(r);
+            match r.rtype {
+                RecordType::Data => {
+                    let mut addr = r.address as usize + self.offset;
+                    for i in r.data.iter() {
+                        // TODO: check for addr overlap
+                        self.buffer.insert(addr, *i);
+                        addr += 1;
+                    }
+                }
+                RecordType::EndOfFile => {}
+                RecordType::ExtendedSegmentAddress => {
+                    self.offset = (r.data[0] as usize * 256 + r.data[1] as usize) * 16;
+                }
+                RecordType::ExtendedLinearAddress => {
+                    self.offset = (r.data[0] as usize * 256 + r.data[1] as usize) * 65536;
+                }
+                RecordType::StartSegmentAddress => {
+                    // TODO: check record length?
+                    if !self.start_addr.is_empty() {
+                        // TODO: duplicate StartSegmentAddress error
+                    }
+                    self.start_addr.insert(RecordType::StartSegmentAddress, r.data[0..4].to_owned());
+                }
+                RecordType::StartLinearAddress => {
+
+                    self.start_addr.insert(RecordType::StartLinearAddress, r.data[0..4].to_owned());
+                }
+            }
         };
-        Ok(records)
+        Ok(())
     }
 
     /// Creates IntelHex struct instance and fills it with data from provided hex file.
@@ -158,11 +290,123 @@ impl IntelHex {
         let size = raw_contents.len();
         //
         self.filepath = String::from(filepath);
-        self.records = match Self::parse(&raw_contents) {
-            Ok(records) => records,
-            Err(e) => return Err(e)
-        };
+        self.parse(&raw_contents)?;
         self.size = 0;
+        Ok(())
+    }
+
+    pub fn write_hex(&mut self, filepath: &str) -> Result<(), io::Error> {
+        let file = fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(filepath)?;
+
+        // Wrap in BufWriter for efficient line-by-line writing
+        let mut writer = io::BufWriter::new(file);
+
+        // Write start addr TODO: place it - start or end of file?
+        if !self.start_addr.is_empty() {
+            let (rtype, data) = self.start_addr.iter().next().unwrap();
+            let record = Record::create(0, *rtype, data)?;
+            writeln!(writer, "{}", record)?; // writes a line and adds newline
+        }
+
+        let mut curr_high_addr = 0;
+        let mut chunk_start: Option<u16> = None;
+        let mut prev_addr: Option<usize> = None;
+        let mut chunk_data = Vec::new();
+
+        for (addr, byte) in &self.buffer {
+            // Split address into low and high
+            let high_addr = (addr >> 16) as u16;
+            let low_addr = (addr & 0xFFFF) as u16;
+
+            // If ELA segment changed → flush current chunk and emit ELA
+            if curr_high_addr != high_addr {
+                if let Some(start) = chunk_start {
+                    // Make data record
+                    let record = Record::create(start, RecordType::Data, &chunk_data)?;
+                    writeln!(writer, "{}", record)?;
+                    // Make ELA record
+                    let (msb, lsb) = (high_addr / 256, high_addr % 256);
+                    let bin: Vec<u8> = vec![msb as u8, lsb as u8];
+                    let record = Record::create(0, RecordType::ExtendedLinearAddress, &bin)?;
+                    writeln!(writer, "{}", record)?;
+                    // Update segment's current address
+                    curr_high_addr = high_addr;
+                    //
+                    chunk_data.clear();
+                    chunk_start = None;
+                    prev_addr = None; // Reset continuity check
+                }
+            }
+
+            // If gap detected or chunk full → flush
+            if let Some(prev) = prev_addr {
+                if (*addr != prev + 1) || chunk_data.len() >= 16 {
+                    // Make data record
+                    let record = Record::create(chunk_start.unwrap(), RecordType::Data, &chunk_data)?;
+                    writeln!(writer, "{}", record)?;
+                    //
+                    chunk_data.clear();
+                    chunk_start = None;
+                }
+            }
+
+            // Start new chunk if empty
+            if chunk_start.is_none() {
+                chunk_start = Some(low_addr);
+            }
+            // Push byte into data chunk
+            chunk_data.push(*byte);
+            // Update address
+            prev_addr = Some(*addr);
+        }
+
+        // Flush last chunk
+        let record = Record::create(chunk_start.unwrap(), RecordType::Data, &chunk_data)?;
+        writeln!(writer, "{}", record)?;
+
+        let record = Record::create(0, RecordType::EndOfFile, &vec![])?;
+        writeln!(writer, "{}", record)?; // writes a line and adds newline
+
+        Ok(())
+    }
+
+    pub fn get_byte(&self, address: usize) -> Option<u8> {
+        self.buffer.get(&address).copied()
+    }
+
+    pub fn get_buffer_slice(&self, addr_arr: &[usize]) -> Option<Vec<u8>> {
+        let mut out = Vec::with_capacity(addr_arr.len());
+        for addr in addr_arr {
+            if let Some(&byte) = self.buffer.get(addr) {
+                out.push(byte);
+            } else {
+                return None; // invalid address
+            }
+        }
+        Some(out)
+    }
+
+    pub fn update_byte(&mut self, address: usize, value: u8) -> Result<(), io::Error> {
+        if let Some(v) = self.buffer.get_mut(&address) {
+            *v = value;
+            Ok(())
+        } else {
+            Err(io::Error::from(io::ErrorKind::InvalidData)) // invalid address
+        }
+    }
+
+    pub fn update_buffer_slice(&mut self, updates_arr: &[(usize, u8)]) -> Result<(), io::Error> {
+        for &(addr, value) in updates_arr {
+            if let Some(byte) = self.buffer.get_mut(&addr) {
+                *byte = value;
+            } else {
+                return Err(io::Error::from(io::ErrorKind::InvalidData)); // invalid address
+            }
+        }
         Ok(())
     }
 }
@@ -170,15 +414,11 @@ impl IntelHex {
 
 fn main() {
     // Example 1
-    let mut ih1 = IntelHex::new();
-    ih1.load_hex("src/ih_example.hex").unwrap();
-    for rec in &ih1.records {
-        println!("{:?}", rec);
-    }
+    // let mut ih1 = IntelHex::new();
+    // ih1.load_hex("src/ex.hex").unwrap();
+    // ih1.write_hex("src/ih1_example_regen.hex").unwrap();
 
     // Example 2
-    let ih2 = IntelHex::from_hex("src/ih_example.hex").unwrap();
-    for rec in &ih2.records {
-        println!("{:?}", rec);
-    }
+    let mut ih2 = IntelHex::from_hex("src/ih_example.hex").unwrap();
+    ih2.write_hex("src/ih2_example_regen.hex").unwrap();
 }
