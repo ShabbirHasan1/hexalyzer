@@ -50,7 +50,7 @@ impl App {
                             let input_path = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/ih_example_1.hex");
                             self.ih = IntelHex::from_hex(input_path).unwrap();
 
-                            for (addr, byte) in &self.ih.to_bttree_map() {
+                            for (addr, byte) in &self.ih.to_btree_map() {
                                 self.byte_addr_map.insert(*addr, *byte);
                             }
                             self.min_addr = self.byte_addr_map.keys().min().unwrap().clone();
@@ -89,7 +89,7 @@ impl App {
                         .spacing([30.0, 4.0]) // horizontal & vertical spacing
                         .show(ui, |ui| {
                             ui.label("File Name");
-                            ui.label(&self.ih.filepath);
+                            ui.label(self.ih.filepath.to_str().unwrap());
                             ui.end_row();
 
                             ui.label("File Size");
