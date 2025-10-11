@@ -1,4 +1,4 @@
-use intelhex::IntelHex;
+use intelhex::{IntelHex, IntelHexError};
 use std::fs;
 use std::io;
 
@@ -43,16 +43,15 @@ fn test_load_hex() {
 fn test_hex_parsing_returns_error() {
     // Define in/out paths
     let input_path = "tests/fixtures/ih_bad_checksum.hex";
-    let output_path = "build/t3/ih.hex";
 
     // Parse hex file
     let ih = IntelHex::from_hex(input_path);
 
     // Assert that the Result is Err
-    if let Err(_) = ih {
-        assert!(true);
+    if let Some(my_err) = ih.unwrap_err().downcast_ref::<IntelHexError>() {
+        assert!(matches!(my_err, IntelHexError::RecordChecksumMismatch(0x55, 0xFF)));
     } else {
-        assert!(false, "Should have failed with error..."); // TODO: check for error type
+        assert!(false, "Should have failed with error...");
     }
 }
 
