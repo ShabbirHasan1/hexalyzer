@@ -13,9 +13,9 @@ use crate::error::IntelHexError;
 #[derive(Debug, Clone)]
 pub struct StartAddress {
     /// Type of the start address
-    rtype: Option<RecordType>,
+    pub rtype: Option<RecordType>,
     /// Data bytes (the address itself stored as byte array)
-    bytes: Option<[u8; 4]>,
+    pub bytes: Option<[u8; 4]>,
 }
 
 impl StartAddress {

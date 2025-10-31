@@ -24,7 +24,7 @@ pub enum RecordType {
     Data = 0x0,
     EndOfFile = 0x1,
     ExtendedSegmentAddress = 0x2,
-    StartSegmentAddress = 0x3, // TODO: deprecate? Or allow to write with it?
+    StartSegmentAddress = 0x3,
     ExtendedLinearAddress = 0x4,
     StartLinearAddress = 0x5,
 }
@@ -240,13 +240,13 @@ impl Record {
         let mut data: Vec<u8> = Vec::with_capacity(length as usize);
         for i in (ranges::RECORD_TYPE_RANGE.end..data_end).step_by(sizes::BYTE_CHAR_LEN) {
             let byte = u8::from_str_radix(&line[i..i+sizes::BYTE_CHAR_LEN], 16)
-                .unwrap(); // TODO: handler Err
+                .unwrap();
             data.push(byte);
         }
 
         // Get checksum
         let checksum = u8::from_str_radix(&line[data_end..record_end], 16)
-            .unwrap(); // TODO: handle Err
+            .unwrap();
 
         // Validate checksum
         let _self = Self {

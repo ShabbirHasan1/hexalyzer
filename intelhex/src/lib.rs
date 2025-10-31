@@ -3,7 +3,7 @@
 //! `intelhex` is a Rust library for parsing, validating, and working with Intel HEX files.
 //!
 //! The library provides:
-//! - Parser for Intel HEX files (via ['IntelHex'] struct).
+//! - Parser for Intel HEX files (via [`IntelHex`] struct).
 //! - Error handling with [`IntelHexError`].
 //! - Easy access to hex data for its reading and modification.
 //!
@@ -21,5 +21,6 @@ mod error;
 mod intelhex;
 
 // Public APIs
-pub use intelhex::IntelHex;
+pub use intelhex::{IntelHex, StartAddress};
+pub use record::RecordType;
 pub use error::IntelHexError;

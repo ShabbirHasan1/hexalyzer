@@ -20,12 +20,13 @@ pub enum IntelHexError {
     RecordLengthInvalidForType(RecordType, usize, usize),
     /// Record's address does not match the record type
     RecordAddressInvalidForType(RecordType, usize, usize),
+    /// TBD
     RecordNotSupported,
     /// Record length is odd
     RecordNotEvenLength,
     /// Record checksum mismatch
     RecordChecksumMismatch(u8, u8),
-    /// Invalid payload length
+    /// Invalid length of data bytes
     RecordInvalidPayloadLength,
     /// Encountered address that already contains data
     RecordAddressOverlap(usize),
@@ -40,10 +41,18 @@ pub enum IntelHexError {
 impl fmt::Display for IntelHexError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            IntelHexError::MissingStartCode => write!(f, "Missing start code ':'"),
-            IntelHexError::ContainsInvalidCharacters => write!(f, "Record contains invalid characters"),
-            IntelHexError::RecordTooShort => write!(f, "Record too short"),
-            IntelHexError::RecordTooLong => write!(f, "Record too long"),
+            IntelHexError::MissingStartCode => {
+                write!(f, "Missing start code ':'")
+            },
+            IntelHexError::ContainsInvalidCharacters => {
+                write!(f, "Record contains invalid character(s)")
+            },
+            IntelHexError::RecordTooShort => {
+                write!(f, "Record too short")
+            },
+            IntelHexError::RecordTooLong => {
+                write!(f, "Record too long")
+            },
             IntelHexError::RecordLengthInvalidForType(rtype, expected, actual) => {
                 write!(f, "For record type {rtype:?} expected data length is {expected} bytes, encountered {actual}")
             }
@@ -51,9 +60,11 @@ impl fmt::Display for IntelHexError {
                 write!(f, "For record type {rtype:?} expected address is {expected}, encountered {actual}")
             }
             IntelHexError::RecordAddressOverlap(address) => {
-                write!(f, "Encountered data at the address {address} already used by another record")
+                write!(f, "Encountered duplicate address {address}")
             }
-            IntelHexError::InvalidRecordType => write!(f, "Invalid record type"),
+            IntelHexError::InvalidRecordType => {
+                write!(f, "Invalid record type")
+            },
             IntelHexError::RecordChecksumMismatch(expected, actual) => {
                 write!(f, "Invalid record checksum, expected: {expected}, actual: {actual}")
             },
@@ -63,12 +74,14 @@ impl fmt::Display for IntelHexError {
             IntelHexError::RecordNotEvenLength => {
                 write!(f, "Record with uneven length")
             }
-            IntelHexError::RecordNotSupported => write!(f, "Record not supported"),
+            IntelHexError::RecordNotSupported => {
+                write!(f, "Record not supported")
+            },
             IntelHexError::InvalidAddress(address) => {
                 write!(f, "No data found at address {address}")
             },
             IntelHexError::DuplicateStartAddress => {
-                write!(f, "Encountered second start address")
+                write!(f, "Encountered second start address record")
             }
         }
     }
