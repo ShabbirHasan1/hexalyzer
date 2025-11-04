@@ -4,6 +4,7 @@ use super::HexViewer;
 
 impl HexViewer {
     pub(crate) fn show_central_workspace(&mut self, ctx: &egui::Context) {
+        // Get filename
         let filename = self.ih.filepath
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
@@ -11,76 +12,100 @@ impl HexViewer {
 
         // LEFT PANEL
         egui::SidePanel::left("left_panel")
-            .width_range(200.0..=350.0)
+            .exact_width(250.0)
             .show(ctx, |ui| {
-            egui::CollapsingHeader::new("File Information")
-                .default_open(true)
-                .show(ui, |ui| {
-                    egui::Grid::new("file_info_grid")
-                        .num_columns(2) // two columns: label + value
-                        .spacing([30.0, 4.0]) // horizontal & vertical spacing
-                        .show(ui, |ui| {
-                            ui.label("File Name");
-                            ui.label(filename);
-                            ui.end_row();
 
-                            ui.label("File Size");
-                            ui.label(format!("{} bytes", self.ih.size));
-                            ui.end_row();
-                        });
-                });
+                // File Info
+                egui::CollapsingHeader::new("File Information")
+                    .default_open(true)
+                    .show(ui, |ui| {
+                        egui::Grid::new("file_info_grid")
+                            .num_columns(2) // two columns: label + value
+                            .spacing([30.0, 4.0]) // horizontal & vertical spacing
+                            .show(ui, |ui| {
+                                ui.label("File Name");
+                                ui.label(filename);
+                                ui.end_row();
+                                ui.label("File Size");
+                                ui.label(format!("{} bytes", self.ih.size));
+                                ui.end_row();
+                            });
+                    });
 
-            egui::CollapsingHeader::new("Data Inspector")
-                .default_open(true)
-                .show(ui, |ui| {
-                    egui::Grid::new("data_inspector_grid")
-                        .num_columns(2) // two columns: label & value
-                        .spacing([20.0, 4.0]) // horizontal & vertical spacing
-                        .show(ui, |ui| {
-                            ui.heading("Type");
-                            ui.heading("Value");
-                            ui.end_row();
+                // Data Inspector
+                egui::CollapsingHeader::new("Data Inspector")
+                    .default_open(true)
+                    .show(ui, |ui| {
+                        egui::Grid::new("data_inspector_grid")
+                            .num_columns(2) // two columns: label & value
+                            .spacing([20.0, 4.0]) // horizontal & vertical spacing
+                            .show(ui, |ui| {
+                                ui.heading("Type");
+                                ui.heading("Value");
+                                ui.end_row();
 
-                            let val = self.selected.unwrap_or((0, 0)).1;
+                                if self.selected.is_none() {
+                                    ui.label("--");
+                                    ui.label("--");
+                                    ui.end_row();
+                                    return;
+                                }
 
-                            ui.label("uint_8");
-                            ui.label((val as u8).to_string());
-                            ui.end_row();
-                            // let val: u16 = (val as u16) << 8;
-                            ui.label("uint_16");
-                            ui.label((val as u16).to_string());
-                            ui.end_row();
-                            // let val: u32 = (val as u32) << 16;
-                            ui.label("uint_32");
-                            ui.label((val as u32).to_string());
-                            ui.end_row();
-                            // let val: u64 = (val as u64) << 32;
-                            ui.label("uint_64");
-                            ui.label((val as u64).to_string());
-                            ui.end_row();
+                                let sel = self.selected.as_ref().unwrap();
+                                let bytes: Vec<u8> = self.byte_addr_map
+                                    .range(sel[0].0..=sel[1].0)
+                                    .map(|(_, &b)| b)
+                                    .collect();
 
-                            ui.label("int_8");
-                            ui.label((val as i8).to_string());
-                            ui.end_row();
-                            ui.label("int_16");
-                            ui.label((val as i16).to_string());
-                            ui.end_row();
-                            ui.label("int_32");
-                            ui.label((val as i32).to_string());
-                            ui.end_row();
-                            ui.label("int_64");
-                            ui.label((val as i64).to_string());
-                            ui.end_row();
-
-                            // TODO: fix floats to show in exponent if too long number
-                            // ui.label("float_32");
-                            // ui.label((f32::from_le_bytes([val, 0, 0, 0])).to_string());
-                            // ui.end_row();
-                            // ui.label("float_64");
-                            // ui.label((f64::from_le_bytes([val, 0, 0, 0, 0, 0, 0, 0])).to_string());
-                            // ui.end_row();
-                        });
-                });
+                                match bytes.len() {
+                                    1 => {
+                                        ui.label("u8");
+                                        ui.label(u8::from_le_bytes([bytes[0]]).to_string());
+                                        ui.end_row();
+                                        ui.label("i8");
+                                        ui.label(i8::from_le_bytes([bytes[0]]).to_string());
+                                        ui.end_row();
+                                    }
+                                    2 => {
+                                        ui.label("u16");
+                                        ui.label(u16::from_le_bytes(bytes.clone().try_into().unwrap()).to_string());
+                                        ui.end_row();
+                                        ui.label("i16");
+                                        ui.label(i16::from_le_bytes(bytes.try_into().unwrap()).to_string());
+                                        ui.end_row();
+                                    }
+                                    4 => {
+                                        ui.label("u32");
+                                        ui.label(u32::from_le_bytes(bytes.clone().try_into().unwrap()).to_string());
+                                        ui.end_row();
+                                        ui.label("i32");
+                                        ui.label(i32::from_le_bytes(bytes.clone().try_into().unwrap()).to_string());
+                                        ui.end_row();
+                                        // TODO: fix display of f32
+                                        // ui.label("f32");
+                                        // ui.label(f32::from_le_bytes(bytes.clone().try_into().unwrap()).to_string());
+                                        // ui.end_row();
+                                    }
+                                    8 => {
+                                        ui.label("u64");
+                                        ui.label(u64::from_le_bytes(bytes.clone().try_into().unwrap()).to_string());
+                                        ui.end_row();
+                                        ui.label("i64");
+                                        ui.label(i64::from_le_bytes(bytes.clone().try_into().unwrap()).to_string());
+                                        ui.end_row();
+                                        // TODO: fix display of f64
+                                        // ui.label("f64");
+                                        // ui.label(f64::from_le_bytes(bytes.clone().try_into().unwrap()).to_string());
+                                        // ui.end_row();
+                                    }
+                                    _ => {
+                                        ui.label("--");
+                                        ui.label("--");
+                                        ui.end_row();
+                                    }
+                                }
+                            });
+                    });
         });
 
         // RIGHT PANEL
@@ -99,6 +124,11 @@ impl HexViewer {
             let row_height = ui.text_style_height(&egui::TextStyle::Monospace);
 
             egui::ScrollArea::vertical()
+                .scroll_source(egui::containers::scroll_area::ScrollSource {
+                    mouse_wheel: true,
+                    scroll_bar: true,
+                    drag: false,
+                })
                 .auto_shrink([false; 2])
                 .show_rows(ui, row_height, total_rows, |ui, row_range| {
                     //
@@ -117,7 +147,13 @@ impl HexViewer {
                             // Hex bytes
                             for addr in start..end {
                                 let byte = self.byte_addr_map.get(&addr).copied();
-                                let is_selected = self.selected == Some((addr, byte.unwrap_or(0)));
+
+                                let mut is_selected = false;
+                                if let Some(s) = &self.selected {
+                                    if let Some(b) = byte {
+                                        is_selected = s[0].0 <= addr && s[1].0 >= addr;
+                                    }
+                                };
 
                                 // Change color of every other byte for better readability
                                 let bg_color = if addr % 2 == 0 {
@@ -140,8 +176,22 @@ impl HexViewer {
                                     ).fill(egui::Color32::from_white_alpha(0)), // fully transparent,
                                 );
 
-                                if button.clicked() && byte.is_some() {
-                                    self.selected = Some((addr, byte.unwrap_or(0)));
+                                let pointer_down = ui.input(|i| i.pointer.primary_down());
+                                let pointer_hover = ui.input(|i| i.pointer.hover_pos());
+
+                                if pointer_down && pointer_hover.is_some() && byte.is_some() && button.rect.contains(pointer_hover.unwrap()) {
+                                    if self.was_released {
+                                        self.was_released = false;
+                                        self.selected = None;
+                                    }
+                                    let sel = self.selected
+                                        .get_or_insert_with(|| [(addr, byte.unwrap()), (addr, byte.unwrap())]);
+                                    sel[1] = (addr, byte.unwrap());
+                                    // println!("{:?}", self.selected)
+                                }
+
+                                if !pointer_down {
+                                    self.was_released = true;
                                 }
 
                                 if is_selected {
@@ -167,10 +217,10 @@ impl HexViewer {
                             ui.add_space(16.0);
 
                             // ASCII representation
-                            for i in start..end {
+                            for addr in start..end {
                                 let mut ch = ' ';
                                 let mut byte = None;
-                                if let Some(b) = self.byte_addr_map.get(&i).copied() {
+                                if let Some(b) = self.byte_addr_map.get(&addr).copied() {
                                     byte = Some(b);
                                     ch = if b.is_ascii_graphic() {
                                         b as char
@@ -178,7 +228,13 @@ impl HexViewer {
                                         '.'
                                     }
                                 }
-                                let is_selected = self.selected == Some((i, byte.unwrap_or(0)));
+
+                                let mut is_selected = false;
+                                if let Some(s) = &self.selected {
+                                    if let Some(b) = byte {
+                                        is_selected = s[0].0 <= addr && s[1].0 >= addr;
+                                    }
+                                };
 
                                 let label = ui.add(egui::Label::new(
                                     egui::RichText::new(ch.to_string())
@@ -186,15 +242,31 @@ impl HexViewer {
                                         .monospace(),
                                 ));
 
-                                if label.clicked() && byte.is_some() {
-                                    self.selected = Some((i, byte.unwrap()));
+                                let pointer_down = ui.input(|i| i.pointer.primary_down());
+                                let pointer_hover = ui.input(|i| i.pointer.hover_pos());
+
+                                if pointer_down && pointer_hover.is_some() && byte.is_some() && label.rect.contains(pointer_hover.unwrap()) {
+                                    if self.was_released {
+                                        self.was_released = false;
+                                        self.selected = None;
+                                    }
+                                    let sel = self.selected
+                                        .get_or_insert_with(|| [(addr, byte.unwrap()), (addr, byte.unwrap())]);
+                                    sel[1] = (addr, byte.unwrap());
+                                    // println!("{:?}", self.selected)
+                                }
+
+                                if !pointer_down {
+                                    self.was_released = true;
                                 }
 
                                 if is_selected {
+                                    // Highlight the selected byte
                                     ui.painter().rect_filled(
                                         label.rect,
                                         0.0,
                                         egui::Color32::from_rgba_premultiplied(33, 81, 109, 20),
+                                        // 31, 53, 68
                                     );
                                 }
                             }
