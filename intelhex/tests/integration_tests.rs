@@ -1,7 +1,6 @@
 use intelhex::{IntelHex, IntelHexError};
 use std::fs;
 
-
 #[test]
 fn test_from_hex() {
     // Define in/out paths
@@ -49,9 +48,11 @@ fn test_hex_parsing_returns_error() {
 
     // Assert that the Result is Err
     if let Some(my_err) = ih.unwrap_err().downcast_ref::<IntelHexError>() {
-        assert!(matches!(my_err, IntelHexError::RecordChecksumMismatch(0x55, 0xFF)));
+        assert!(matches!(
+            my_err,
+            IntelHexError::RecordChecksumMismatch(0x55, 0xFF)
+        ));
     } else {
         assert!(false, "Should have failed with error...");
     }
 }
-

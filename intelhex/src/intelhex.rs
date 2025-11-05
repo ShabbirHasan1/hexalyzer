@@ -1,14 +1,13 @@
 //! The 'intelhex' module defines the ['IntelHex'] struct which provides APIs for
 //! loading, modifying and writing Intel HEX files.
 
+use crate::error::IntelHexError;
+use crate::record::{Record, RecordType};
 use std::collections::BTreeMap;
 use std::error::Error;
-use std::{fs, io};
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use crate::record::{Record, RecordType};
-use crate::error::IntelHexError;
-
+use std::{fs, io};
 
 #[derive(Debug, Clone)]
 pub struct StartAddress {
@@ -20,13 +19,15 @@ pub struct StartAddress {
 
 impl StartAddress {
     pub fn new(rtype: RecordType, bytes: [u8; 4]) -> Self {
-        Self { rtype: Some(rtype), bytes: Some(bytes) }
+        Self {
+            rtype: Some(rtype),
+            bytes: Some(bytes),
+        }
     }
     pub fn is_empty(&self) -> bool {
         self.rtype.is_none() && self.bytes.is_none()
     }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct IntelHex {
@@ -71,15 +72,15 @@ impl IntelHex {
         // Iterate over lines of records
         for line in raw_contents.lines() {
             // Parse the record
-            let record = match Record::parse(line) {
-                Ok(rec) => rec,
-                Err(e) => return Err(e)
-            };
+            let record = Record::parse(line)?;
 
             // Validate checksum of the record
             let expected_checksum = Record::calculate_checksum_from_self(&record);
-            if record.checksum != expected_checksum{
-                return Err(IntelHexError::RecordChecksumMismatch(expected_checksum, record.checksum));
+            if record.checksum != expected_checksum {
+                return Err(IntelHexError::RecordChecksumMismatch(
+                    expected_checksum,
+                    record.checksum,
+                ));
             }
 
             // Fill in self
@@ -87,7 +88,7 @@ impl IntelHex {
                 RecordType::Data => {
                     let mut addr = record.address as usize + self.offset;
                     for byte in &record.data {
-                        if let Some(_) = self.buffer.insert(addr, *byte) {
+                        if self.buffer.insert(addr, *byte).is_some() {
                             // Address overlap
                             return Err(IntelHexError::RecordAddressOverlap(addr));
                         }
@@ -111,7 +112,7 @@ impl IntelHex {
                     self.start_addr.bytes = Some(record.data.try_into().unwrap());
                 }
             }
-        };
+        }
         Ok(())
     }
 
@@ -198,39 +199,39 @@ impl IntelHex {
             let low_addr = (addr & 0xFFFF) as u16;
 
             // If ELA segment changed -> flush current chunk and emit ELA
-            if curr_high_addr != high_addr {
-                if let Some(start) = chunk_start {
-                    // Write data record
-                    let record = Record::create(start, RecordType::Data, &chunk_data)?;
-                    writeln!(writer, "{}", record)?;
+            if curr_high_addr != high_addr
+                && let Some(start) = chunk_start
+            {
+                // Write data record
+                let record = Record::create(start, RecordType::Data, &chunk_data)?;
+                writeln!(writer, "{}", record)?;
 
-                    // Write ELA record
-                    let (msb, lsb) = (high_addr / 256, high_addr % 256);
-                    let bin: Vec<u8> = vec![msb as u8, lsb as u8];
-                    let record = Record::create(0, RecordType::ExtendedLinearAddress, &bin)?;
-                    writeln!(writer, "{}", record)?;
+                // Write ELA record
+                let (msb, lsb) = (high_addr / 256, high_addr % 256);
+                let bin: Vec<u8> = vec![msb as u8, lsb as u8];
+                let record = Record::create(0, RecordType::ExtendedLinearAddress, &bin)?;
+                writeln!(writer, "{}", record)?;
 
-                    // Update segment's current address
-                    curr_high_addr = high_addr;
+                // Update segment's current address
+                curr_high_addr = high_addr;
 
-                    // Clean up
-                    chunk_data.clear();
-                    chunk_start = None;
-                    prev_addr = None; // resets continuity check
-                }
+                // Clean up
+                chunk_data.clear();
+                chunk_start = None;
+                prev_addr = None; // resets continuity check
             }
 
             // If gap detected or chunk full -> flush
-            if let Some(prev) = prev_addr {
-                if (*addr != prev + 1) || chunk_data.len() >= 16 {
-                    // Write data record
-                    let record = Record::create(chunk_start.unwrap(), RecordType::Data, &chunk_data)?;
-                    writeln!(writer, "{}", record)?;
+            if let Some(prev) = prev_addr
+                && ((*addr != prev + 1) || chunk_data.len() >= 16)
+            {
+                // Write data record
+                let record = Record::create(chunk_start.unwrap(), RecordType::Data, &chunk_data)?;
+                writeln!(writer, "{}", record)?;
 
-                    // Clean up
-                    chunk_data.clear();
-                    chunk_start = None;
-                }
+                // Clean up
+                chunk_data.clear();
+                chunk_start = None;
             }
 
             // Start new chunk if empty
@@ -250,7 +251,7 @@ impl IntelHex {
         writeln!(writer, "{}", record)?;
 
         // Write EOL record
-        let record = Record::create(0, RecordType::EndOfFile, &vec![])?;
+        let record = Record::create(0, RecordType::EndOfFile, &[])?;
         write!(writer, "{}", record)?; // writes a line (no newline)
 
         Ok(())
@@ -333,7 +334,10 @@ impl IntelHex {
     /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
     /// let res: Result<(), IntelHexError> = ih.update_buffer_slice(&[(0x0, 0xFF), (0x1, 0xFF), (0x2, 0xFF)]);
     /// ```
-    pub fn update_buffer_slice(&mut self, updates_map: &[(usize, u8)]) -> Result<(), IntelHexError> {
+    pub fn update_buffer_slice(
+        &mut self,
+        updates_map: &[(usize, u8)],
+    ) -> Result<(), IntelHexError> {
         for &(addr, value) in updates_map {
             if let Some(byte) = self.buffer.get_mut(&addr) {
                 *byte = value;
@@ -345,11 +349,9 @@ impl IntelHex {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    // use super::*;
     #[test]
     fn test_foo() {
         assert!(true);

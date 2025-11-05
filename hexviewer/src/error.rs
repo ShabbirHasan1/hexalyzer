@@ -1,10 +1,9 @@
-use eframe::egui;
 use super::HexViewer;
-
+use eframe::egui;
 
 impl HexViewer {
     pub(crate) fn show_popup_if_error(&mut self, ctx: &egui::Context) {
-        if let Some(_) = self.error {
+        if self.error.is_some() {
             let screen_rect = ctx.screen_rect();
 
             // Block interaction with the app
@@ -30,8 +29,8 @@ impl HexViewer {
                 .title_bar(false)
                 .show(ctx, |ui| {
                     ui.label(
-                        "Error during intelhex parsing:\n".to_string() +
-                            self.error.as_ref().unwrap()
+                        "Error during intelhex parsing:\n".to_string()
+                            + self.error.as_ref().unwrap(),
                     );
 
                     // Add space before close button

@@ -16,11 +16,11 @@
 //! ih.write_hex("build/ex1/ih.hex");
 //! ```
 
-mod record;
 mod error;
 mod intelhex;
+mod record;
 
 // Public APIs
+pub use error::IntelHexError;
 pub use intelhex::{IntelHex, StartAddress};
 pub use record::RecordType;
-pub use error::IntelHexError;

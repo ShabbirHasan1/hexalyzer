@@ -1,12 +1,11 @@
-mod hexviewer;
-mod update;
 mod error;
+mod hexviewer;
 mod topbar;
+mod update;
 mod workspace;
 
-use eframe::egui::{ViewportBuilder};
+use eframe::egui::ViewportBuilder;
 use hexviewer::HexViewer;
-
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
@@ -18,6 +17,6 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "Hexalyzer",
         options,
-        Box::new(|_cc| Ok(Box::new(HexViewer::default())))
+        Box::new(|_cc| Ok(Box::new(HexViewer::default()))),
     )
 }

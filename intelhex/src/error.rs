@@ -1,10 +1,9 @@
 //! The 'error' module defines the ['IntelHexError'] struct which contains errors that
 //! can occur when parsing Intel HEX files via ['IntelHex'].
 
+use crate::record::RecordType;
 use std::error::Error;
 use std::fmt;
-use crate::record::RecordType;
-
 
 #[derive(Debug, PartialEq)]
 pub enum IntelHexError {
@@ -43,43 +42,52 @@ impl fmt::Display for IntelHexError {
         match self {
             IntelHexError::MissingStartCode => {
                 write!(f, "Missing start code ':'")
-            },
+            }
             IntelHexError::ContainsInvalidCharacters => {
                 write!(f, "Record contains invalid character(s)")
-            },
+            }
             IntelHexError::RecordTooShort => {
                 write!(f, "Record too short")
-            },
+            }
             IntelHexError::RecordTooLong => {
                 write!(f, "Record too long")
-            },
+            }
             IntelHexError::RecordLengthInvalidForType(rtype, expected, actual) => {
-                write!(f, "For record type {rtype:?} expected data length is {expected} bytes, encountered {actual}")
+                write!(
+                    f,
+                    "For record type {rtype:?} expected data length is {expected} bytes, encountered {actual}"
+                )
             }
             IntelHexError::RecordAddressInvalidForType(rtype, expected, actual) => {
-                write!(f, "For record type {rtype:?} expected address is {expected}, encountered {actual}")
+                write!(
+                    f,
+                    "For record type {rtype:?} expected address is {expected}, encountered {actual}"
+                )
             }
             IntelHexError::RecordAddressOverlap(address) => {
                 write!(f, "Encountered duplicate address {address}")
             }
             IntelHexError::InvalidRecordType => {
                 write!(f, "Invalid record type")
-            },
+            }
             IntelHexError::RecordChecksumMismatch(expected, actual) => {
-                write!(f, "Invalid record checksum, expected: {expected}, actual: {actual}")
-            },
+                write!(
+                    f,
+                    "Invalid record checksum, expected: {expected}, actual: {actual}"
+                )
+            }
             IntelHexError::RecordInvalidPayloadLength => {
                 write!(f, "Payload (data bytes) size differs from record's lengths")
-            },
+            }
             IntelHexError::RecordNotEvenLength => {
                 write!(f, "Record with uneven length")
             }
             IntelHexError::RecordNotSupported => {
                 write!(f, "Record not supported")
-            },
+            }
             IntelHexError::InvalidAddress(address) => {
                 write!(f, "No data found at address {address}")
-            },
+            }
             IntelHexError::DuplicateStartAddress => {
                 write!(f, "Encountered second start address record")
             }

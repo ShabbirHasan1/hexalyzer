@@ -1,6 +1,5 @@
-use eframe;
-use eframe::egui;
 use super::HexViewer;
+use eframe::egui;
 
 //
 // IMPROVEMENTS:
@@ -10,10 +9,6 @@ use super::HexViewer;
 // 2) Optimize how we store the hex data in the HexViewer
 //    a) store in HashMap more optimal?
 //
-// ADDITIONAL FEATURES:
-// 1) Multi-byte select
-//
-
 
 impl eframe::App for HexViewer {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
@@ -22,7 +17,3 @@ impl eframe::App for HexViewer {
         self.show_central_workspace(ctx);
     }
 }
-
-
-
-
