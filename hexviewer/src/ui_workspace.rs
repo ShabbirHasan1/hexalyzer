@@ -76,9 +76,9 @@ impl HexViewer {
                                     // Create text edit field (TODO: same size as button)
                                     let text_edit =
                                         egui::TextEdit::singleline(&mut self.editor.buffer)
-                                            .desired_width(21.0)
+                                            // .desired_width(100.0)
                                             .desired_rows(1);
-                                    let response = ui.add_sized((21.0, 18.0), text_edit);
+                                    let response = ui.add_sized((12.0, 12.0), text_edit);
 
                                     // Allows direct typing without needing to select the edit zone
                                     response.request_focus();
@@ -123,17 +123,7 @@ impl HexViewer {
                                         && self.selection.is_single_byte()
                                         && self.selection.released
                                     {
-                                        // Capture keyboard input
-                                        let mut typed_char: Option<char> = None;
-                                        ui.input(|i| {
-                                            for event in &i.events {
-                                                if let egui::Event::Text(t) = event
-                                                    && let Some(c) = t.chars().next()
-                                                {
-                                                    typed_char = Some(c);
-                                                }
-                                            }
-                                        });
+                                        let typed_char = Self::get_keyboard_input_event(ui);
                                         // Start editing if user types a hex character
                                         if let Some(ch) = typed_char
                                             && ch.is_ascii_hexdigit()

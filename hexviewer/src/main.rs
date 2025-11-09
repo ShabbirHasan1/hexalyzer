@@ -6,6 +6,7 @@ mod selection;
 mod ui_topbar;
 mod ui_workspace;
 mod ui_fileinfo;
+mod ui_events;
 
 use eframe::egui;
 use eframe::egui::ViewportBuilder;
