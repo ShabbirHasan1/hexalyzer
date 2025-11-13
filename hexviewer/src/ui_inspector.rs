@@ -23,7 +23,6 @@ fn format_with_separators<T: ToString>(n: T) -> String {
     format!("{}{}", sign, result)
 }
 
-
 /// Format the float so that it is nicely presented
 fn format_float<T: Into<f64>>(float_value: T) -> String {
     let f = float_value.into();

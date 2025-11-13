@@ -38,8 +38,11 @@ impl HexViewer {
                     {
                         // TODO: handle saving going wrong
                         // TODO: implement proper solution
-                        let vec: Vec<(usize, u8)> = self.byte_addr_map.iter().map(|(&k, &v)| (k, v)).collect();
-                        self.ih.update_buffer_slice(vec.as_slice()).expect("TODO: panic message");
+                        let vec: Vec<(usize, u8)> =
+                            self.byte_addr_map.iter().map(|(&k, &v)| (k, v)).collect();
+                        self.ih
+                            .update_buffer_slice(vec.as_slice())
+                            .expect("TODO: panic message");
                         self.ih.write_hex(path).expect("Failed to save the file");
                     }
                 });

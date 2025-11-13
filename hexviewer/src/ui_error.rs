@@ -1,4 +1,4 @@
-use super::HexViewer;
+use super::{HexViewer, colors};
 use eframe::egui;
 
 impl HexViewer {
@@ -19,7 +19,7 @@ impl HexViewer {
             egui::Order::Background,
             egui::Id::new("modal_bg"),
         ));
-        painter.rect_filled(screen_rect, 0.0, egui::Color32::from_black_alpha(150));
+        painter.rect_filled(screen_rect, 0.0, colors::SHADOW);
 
         // Display the pop-up
         egui::Window::new("Error")

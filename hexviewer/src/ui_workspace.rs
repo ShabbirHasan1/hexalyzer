@@ -1,7 +1,59 @@
 use super::HexViewer;
+use crate::colors;
+use crate::ui_events::EventManager;
 use eframe::egui;
 
 impl HexViewer {
+    /// Update edit buffer used for temporary storage of user key inputs
+    /// during byte editing process
+    fn update_edit_buffer(&mut self, typed_char: Option<char>) {
+        if self.selection.range.is_some()
+            && self.selection.released
+            && !self.editor.in_progress
+            && let Some(ch) = typed_char
+        {
+            // Start editing if user types a hex char
+            if ch.is_ascii_hexdigit() {
+                self.editor.in_progress = true;
+                self.editor.addr = self.selection.range;
+                self.editor.buffer = ch.to_ascii_uppercase().to_string();
+            }
+        } else if self.editor.in_progress {
+            // If other bytes got selected - clear and return
+            if !self.editor.is_addr_same(self.selection.range) {
+                self.editor.clear();
+            }
+
+            if let Some(ch) = typed_char {
+                self.editor.buffer.insert(1, ch);
+            }
+
+            // Allow only hex chars
+            self.editor.buffer.retain(|c| c.is_ascii_hexdigit());
+
+            // When two hex chars are entered - commit automatically
+            if self.editor.buffer.len() == 2 {
+                if let Ok(value) = u8::from_str_radix(&self.editor.buffer, 16)
+                    && let Some([start, end]) = self.editor.addr
+                {
+                    // Handle reversed range
+                    let (s, e) = if start <= end {
+                        (start, end)
+                    } else {
+                        (end, start)
+                    };
+                    // Update the bytes in the map
+                    for addr in s..=e {
+                        if let Some(byte) = self.byte_addr_map.get_mut(&addr) {
+                            *byte = value;
+                        }
+                    }
+                }
+                self.editor.clear();
+            }
+        }
+    }
+
     pub(crate) fn show_central_workspace(&mut self, ctx: &egui::Context) {
         // LEFT PANEL (FILE INFORMATION & DATA INSPECTOR)
         egui::SidePanel::left("left_panel")
@@ -41,7 +93,26 @@ impl HexViewer {
                 })
                 .auto_shrink([false; 2])
                 .show_rows(ui, row_height, total_rows, |ui, row_range| {
-                    //
+                    // Get state of the mouse click
+                    let pointer_down = ui.input(|i| i.pointer.primary_down());
+                    let pointer_hover = ui.input(|i| i.pointer.hover_pos());
+
+                    // Detect released clicked
+                    if !pointer_down {
+                        self.selection.released = true;
+                    }
+
+                    // Get state of key press
+                    let typed_char = EventManager::get_keyboard_input(ui);
+
+                    // Update byte edit buffer base on the key press
+                    self.update_edit_buffer(typed_char);
+
+                    // Cancel byte editing on Esc press
+                    if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+                        self.editor.clear()
+                    }
+
                     for row in row_range {
                         ui.horizontal(|ui| {
                             // Start and end addresses
@@ -54,148 +125,92 @@ impl HexViewer {
                             // Add space before hex block
                             ui.add_space(16.0);
 
-                            // Hex bytes
+                            // Hex bytes representation row
                             for addr in start..end {
+                                // Determine is the current byte selected
                                 let byte = self.byte_addr_map.get(&addr).copied();
                                 let is_selected =
                                     byte.is_some() && self.selection.is_addr_within_range(addr);
 
                                 // Change color of every other byte for better readability
                                 let bg_color = if addr % 2 == 0 {
-                                    egui::Color32::from_gray(210)
+                                    colors::GRAY_210
                                 } else {
-                                    egui::Color32::from_gray(160) // light gray
+                                    colors::GRAY_160
                                 };
 
-                                if is_selected && self.editor.in_progress {
-                                    // If another byte got selected - clear and return
-                                    if !self.editor.is_addr_same(addr) {
-                                        self.editor.clear();
-                                        return;
-                                    }
-                                    // Create text edit field (TODO: same size as button)
-                                    let text_edit =
-                                        egui::TextEdit::singleline(&mut self.editor.buffer)
-                                            // .desired_width(100.0)
-                                            .desired_rows(1);
-                                    let response = ui.add_sized((12.0, 12.0), text_edit);
-
-                                    // Allows direct typing without needing to select the edit zone
-                                    response.request_focus();
-
-                                    // Allow only hex chars
-                                    self.editor.buffer.retain(|c| c.is_ascii_hexdigit());
-
-                                    // When two hex chars are entered - commit automatically
-                                    if self.editor.buffer.len() == 2 {
-                                        if let Ok(value) =
-                                            u8::from_str_radix(&self.editor.buffer, 16)
-                                        {
-                                            let value_ref =
-                                                self.byte_addr_map.get_mut(&addr).unwrap();
-                                            *value_ref = value;
-                                        }
-                                        self.editor.clear()
-                                    }
-
-                                    // Cancel on esc
-                                    if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
-                                        self.editor.clear()
+                                // Determine display value of the byte
+                                let display_value = if let Some(b) = byte {
+                                    if is_selected && self.editor.in_progress {
+                                        self.editor.buffer.clone()
+                                    } else {
+                                        format!("{:02X}", b)
                                     }
                                 } else {
-                                    // Each byte is a button
-                                    let mut display_value = "--".to_string();
-                                    if let Some(b) = byte {
-                                        display_value = format!("{:02X}", b);
-                                    }
-                                    let button = ui.add_sized(
-                                        [21.0, 18.0],
-                                        egui::Button::new(
-                                            egui::RichText::new(display_value)
-                                                .monospace()
-                                                .size(12.0)
-                                                .color(bg_color),
-                                        )
-                                        .fill(egui::Color32::from_white_alpha(0)), // fully transparent,
-                                    );
+                                    "--".to_string()
+                                };
 
-                                    if is_selected
-                                        && self.selection.is_single_byte()
-                                        && self.selection.released
-                                    {
-                                        let typed_char = Self::get_keyboard_input_event(ui);
-                                        // Start editing if user types a hex character
-                                        if let Some(ch) = typed_char
-                                            && ch.is_ascii_hexdigit()
-                                        {
-                                            self.editor.in_progress = true;
-                                            self.editor.addr = addr;
-                                            self.editor.buffer =
-                                                ch.to_ascii_uppercase().to_string();
-                                        }
-                                    }
+                                // Show byte as a button
+                                let button = ui.add_sized(
+                                    [21.0, 18.0],
+                                    egui::Button::new(
+                                        egui::RichText::new(display_value)
+                                            .monospace()
+                                            .size(12.0)
+                                            .color(bg_color),
+                                    )
+                                    .fill(colors::TRANSPARENT),
+                                );
 
-                                    let pointer_down = ui.input(|i| i.pointer.primary_down());
-                                    let pointer_hover = ui.input(|i| i.pointer.hover_pos());
+                                // Update the selection range
+                                if pointer_down
+                                    && pointer_hover.is_some()
+                                    && byte.is_some()
+                                    && button.rect.contains(pointer_hover.unwrap())
+                                {
+                                    self.selection.update(addr);
+                                }
 
-                                    // Update the selection range
-                                    if pointer_down
-                                        && pointer_hover.is_some()
-                                        && byte.is_some()
-                                        && button.rect.contains(pointer_hover.unwrap())
-                                    {
-                                        self.selection.update(addr);
-                                    }
+                                // Highlight byte if selected
+                                if is_selected {
+                                    ui.painter()
+                                        .rect_filled(button.rect, 0.0, colors::LIGHT_BLUE);
+                                }
 
-                                    // Detect released clicked
-                                    if !pointer_down {
-                                        self.selection.released = true;
-                                    }
-
-                                    // Highlight selected byte
-                                    if is_selected {
-                                        ui.painter().rect_filled(
-                                            button.rect,
-                                            0.0,
-                                            egui::Color32::from_rgba_premultiplied(33, 81, 109, 20),
-                                            // 31, 53, 68
-                                        );
-                                    }
-
-                                    // Add space every 8 bytes
-                                    if (addr + 1) % 8 == 0 {
-                                        ui.add_space(5.0);
-                                    } else {
-                                        // Make space between buttons as small as possible
-                                        ui.add_space(-6.0);
-                                    }
+                                // Add space every 8 bytes
+                                if (addr + 1) % 8 == 0 {
+                                    ui.add_space(5.0);
+                                } else {
+                                    // Make space between buttons as small as possible
+                                    ui.add_space(-6.0);
                                 }
                             }
 
-                            // Add space before ASCII column
+                            // Add space before ASCII row
                             ui.add_space(16.0);
 
-                            // ASCII representation
+                            // ASCII representation row
                             for addr in start..end {
-                                let mut ch = ' ';
-                                let mut byte = None;
-                                if let Some(b) = self.byte_addr_map.get(&addr).copied() {
-                                    byte = Some(b);
-                                    ch = if b.is_ascii_graphic() { b as char } else { '.' }
-                                }
+                                // Determine display char
+                                let byte = self.byte_addr_map.get(&addr).copied();
+                                let ch = if let Some(b) = byte {
+                                    if b.is_ascii_graphic() { b as char } else { '.' }
+                                } else {
+                                    ' '
+                                };
 
+                                // Determine is char selected
                                 let is_selected =
                                     byte.is_some() && self.selection.is_addr_within_range(addr);
 
+                                // Show char as label
                                 let label = ui.add(egui::Label::new(
                                     egui::RichText::new(ch.to_string())
-                                        .color(egui::Color32::from_gray(160))
+                                        .color(colors::GRAY_160)
                                         .monospace(),
                                 ));
 
-                                let pointer_down = ui.input(|i| i.pointer.primary_down());
-                                let pointer_hover = ui.input(|i| i.pointer.hover_pos());
-
+                                // Update the selection range
                                 if pointer_down
                                     && pointer_hover.is_some()
                                     && byte.is_some()
@@ -204,18 +219,10 @@ impl HexViewer {
                                     self.selection.update(addr);
                                 }
 
-                                if !pointer_down {
-                                    self.selection.released = true;
-                                }
-
+                                // Highlight char if selected
                                 if is_selected {
-                                    // Highlight the selected byte
-                                    ui.painter().rect_filled(
-                                        label.rect,
-                                        0.0,
-                                        egui::Color32::from_rgba_premultiplied(33, 81, 109, 20),
-                                        // 31, 53, 68
-                                    );
+                                    ui.painter()
+                                        .rect_filled(label.rect, 0.0, colors::LIGHT_BLUE);
                                 }
                             }
                         });

@@ -1,14 +1,43 @@
 use eframe::egui;
-use crate::hexviewer::HexViewer;
 
-impl HexViewer {
-    pub(crate) fn get_keyboard_input_event(ui: &egui::Ui) -> Option<char> {
+pub(crate) struct EventManager {}
+
+impl EventManager {
+    /// Helper for mapping keys to hex chars
+    fn key_to_hex_char(key: egui::Key) -> Option<char> {
+        use egui::Key::*;
+        Some(match key {
+            Num0 => '0',
+            Num1 => '1',
+            Num2 => '2',
+            Num3 => '3',
+            Num4 => '4',
+            Num5 => '5',
+            Num6 => '6',
+            Num7 => '7',
+            Num8 => '8',
+            Num9 => '9',
+            A => 'A',
+            B => 'B',
+            C => 'C',
+            D => 'D',
+            E => 'E',
+            F => 'F',
+            _ => return None,
+        })
+    }
+
+    pub(crate) fn get_keyboard_input(ui: &egui::Ui) -> Option<char> {
         ui.input(|i| {
             for event in &i.events {
-                if let egui::Event::Text(t) = event
-                    && let Some(c) = t.chars().next()
+                if let egui::Event::Key {
+                    key,
+                    pressed: false,
+                    ..
+                } = event
+                    && let Some(ch) = Self::key_to_hex_char(*key)
                 {
-                    return Some(c);
+                    return Some(ch);
                 }
             }
             None

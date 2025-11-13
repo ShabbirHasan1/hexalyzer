@@ -1,6 +1,6 @@
+use crate::hexviewer::HexViewer;
 use eframe::egui;
 use eframe::egui::Ui;
-use crate::hexviewer::HexViewer;
 
 impl HexViewer {
     pub(crate) fn show_file_info_contents(&mut self, ui: &mut Ui) {

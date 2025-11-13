@@ -27,11 +27,4 @@ impl Selection {
         let sel = self.range.get_or_insert([addr, addr]);
         sel[1] = addr;
     }
-    /// Is only one byte field selected
-    pub(crate) fn is_single_byte(&self) -> bool {
-        if self.range.is_none() {
-            return false;
-        }
-        self.range.unwrap()[0] == self.range.unwrap()[1]
-    }
 }
