@@ -27,7 +27,7 @@ impl EventManager {
         })
     }
 
-    pub(crate) fn get_keyboard_input(ui: &egui::Ui) -> Option<char> {
+    pub(crate) fn get_keyboard_input_char(ui: &egui::Ui) -> Option<char> {
         ui.input(|i| {
             for event in &i.events {
                 if let egui::Event::Key {
@@ -38,6 +38,22 @@ impl EventManager {
                     && let Some(ch) = Self::key_to_hex_char(*key)
                 {
                     return Some(ch);
+                }
+            }
+            None
+        })
+    }
+
+    pub(crate) fn get_keyboard_input_key(ui: &egui::Ui) -> Option<egui::Key> {
+        ui.input(|i| {
+            for event in &i.events {
+                if let egui::Event::Key {
+                    key,
+                    pressed: false,
+                    ..
+                } = event
+                {
+                    return Some(*key);
                 }
             }
             None

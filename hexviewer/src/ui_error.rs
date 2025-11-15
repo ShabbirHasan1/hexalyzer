@@ -4,14 +4,14 @@ use eframe::egui;
 impl HexViewer {
     /// Show pop-up if error was reported during hex parsing
     pub(crate) fn show_error_popup(&mut self, ctx: &egui::Context) {
-        let screen_rect = ctx.screen_rect();
+        let content_rect = ctx.content_rect();
 
         // Block interaction with the app
         egui::Area::new(egui::Id::from("modal_blocker"))
             .order(egui::Order::Background)
-            .fixed_pos(screen_rect.left_top())
+            .fixed_pos(content_rect.left_top())
             .show(ctx, |ui| {
-                ui.allocate_rect(screen_rect, egui::Sense::click());
+                ui.allocate_rect(content_rect, egui::Sense::click());
             });
 
         // Darken the background
@@ -19,7 +19,7 @@ impl HexViewer {
             egui::Order::Background,
             egui::Id::new("modal_bg"),
         ));
-        painter.rect_filled(screen_rect, 0.0, colors::SHADOW);
+        painter.rect_filled(content_rect, 0.0, colors::SHADOW);
 
         // Display the pop-up
         egui::Window::new("Error")

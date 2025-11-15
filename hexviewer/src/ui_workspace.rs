@@ -55,7 +55,7 @@ impl HexViewer {
     }
 
     pub(crate) fn show_central_workspace(&mut self, ctx: &egui::Context) {
-        // LEFT PANEL (FILE INFORMATION & DATA INSPECTOR)
+        // LEFT PANEL
         egui::SidePanel::left("left_panel")
             .exact_width(280.0)
             .show(ctx, |ui| {
@@ -75,17 +75,30 @@ impl HexViewer {
                         self.show_data_inspector_contents(ui);
                         ui.add_space(5.0);
                     });
+                // SEARCH
+                egui::CollapsingHeader::new("Search")
+                    .default_open(true)
+                    .show(ui, |ui| {
+                        ui.add_space(5.0);
+                        self.show_search_contents(ui);
+                        ui.add_space(5.0);
+                    });
             });
 
         // CENTRAL VIEW
         egui::CentralPanel::default().show(ctx, |ui| {
             let bytes_per_row = 16;
-            // Rounds division up
             let total_rows = (self.max_addr - self.min_addr).div_ceil(bytes_per_row);
             // Get row height in pixels (depends on font size)
             let row_height = ui.text_style_height(&egui::TextStyle::Monospace);
+            // Create scroll area. Scroll if search is triggered.
+            let mut scroll_area = egui::ScrollArea::vertical();
+            if self.search.scroll_addr.is_some() {
+                let offset = self.get_scroll_offset(ui, bytes_per_row);
+                scroll_area = scroll_area.vertical_scroll_offset(offset);
+            }
 
-            egui::ScrollArea::vertical()
+            scroll_area
                 .scroll_source(egui::containers::scroll_area::ScrollSource {
                     mouse_wheel: true,
                     scroll_bar: true,
@@ -103,7 +116,7 @@ impl HexViewer {
                     }
 
                     // Get state of key press
-                    let typed_char = EventManager::get_keyboard_input(ui);
+                    let typed_char = EventManager::get_keyboard_input_char(ui);
 
                     // Update byte edit buffer base on the key press
                     self.update_edit_buffer(typed_char);

@@ -1,5 +1,6 @@
 use super::editor::Editor;
 use super::selection::Selection;
+use crate::ui_search::Search;
 use intelhex::IntelHex;
 use std::collections::BTreeMap;
 
@@ -28,4 +29,6 @@ pub struct HexViewer {
     pub endianness: Endianness,
     /// Error during intelhex parsing
     pub error: Option<String>,
+    /// Search handler..?
+    pub search: Search,
 }

@@ -5,6 +5,7 @@ mod ui_error;
 mod ui_events;
 mod ui_fileinfo;
 mod ui_inspector;
+mod ui_search;
 mod ui_topbar;
 mod ui_workspace;
 
@@ -47,12 +48,9 @@ impl eframe::App for HexViewer {
 }
 
 // TODO for MVP:
-// 1. Hex bytes editing                                 ===> DONE
-// 2. Search feature
-// 3. Floats support in data inspector                  ===> DONE
-// 4. Add line with failure in error popup
-// 5. Verify export works OK
-// 6. Add content to help
-// 7. Verify performance acceptable (cap if needed)
-// 8. Polish up code
-// 9. Add documentation
+// Add line with failure in error popup
+// Verify export works OK
+// Add content to help
+// Verify performance acceptable (cap if needed)
+// Polish up code
+// Add documentation
