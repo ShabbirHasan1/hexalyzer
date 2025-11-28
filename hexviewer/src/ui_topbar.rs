@@ -1,5 +1,6 @@
-use super::HexViewer;
+use crate::HexViewer;
 use eframe::egui;
+// use eframe::egui::debug_text::print;
 use intelhex::IntelHex;
 
 impl HexViewer {
@@ -27,8 +28,8 @@ impl HexViewer {
                                 self.byte_addr_map.insert(*addr, *byte);
                             }
                             // Fill address
-                            self.min_addr = *self.byte_addr_map.keys().min().unwrap();
-                            self.max_addr = *self.byte_addr_map.keys().max().unwrap();
+                            self.addr_range.start = *self.byte_addr_map.keys().min().unwrap();
+                            self.addr_range.end = *self.byte_addr_map.keys().max().unwrap();
                         }
                     }
 
@@ -40,10 +41,21 @@ impl HexViewer {
                         // TODO: implement proper solution
                         let vec: Vec<(usize, u8)> =
                             self.byte_addr_map.iter().map(|(&k, &v)| (k, v)).collect();
-                        self.ih
-                            .update_buffer_slice(vec.as_slice())
-                            .expect("TODO: panic message");
-                        self.ih.write_hex(path).expect("Failed to save the file");
+                        match self.ih.update_buffer_slice(vec.as_slice()) {
+                            Ok(_) => {}
+                            Err(msg) => {
+                                self.error = Some(msg.to_string());
+                            }
+                        }
+
+                        // println!("{:?}", self.byte_addr_map);
+
+                        match self.ih.write_hex(path) {
+                            Ok(_) => {}
+                            Err(msg) => {
+                                self.error = Some(msg.to_string());
+                            }
+                        }
                     }
                 });
 

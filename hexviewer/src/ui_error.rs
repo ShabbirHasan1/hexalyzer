@@ -1,4 +1,4 @@
-use super::{HexViewer, colors};
+use crate::{HexViewer, colors};
 use eframe::egui;
 
 impl HexViewer {

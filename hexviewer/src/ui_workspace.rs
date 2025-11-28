@@ -1,59 +1,9 @@
-use super::HexViewer;
+use crate::HexViewer;
 use crate::colors;
 use crate::ui_events::EventManager;
 use eframe::egui;
 
 impl HexViewer {
-    /// Update edit buffer used for temporary storage of user key inputs
-    /// during byte editing process
-    fn update_edit_buffer(&mut self, typed_char: Option<char>) {
-        if self.selection.range.is_some()
-            && self.selection.released
-            && !self.editor.in_progress
-            && let Some(ch) = typed_char
-        {
-            // Start editing if user types a hex char
-            if ch.is_ascii_hexdigit() {
-                self.editor.in_progress = true;
-                self.editor.addr = self.selection.range;
-                self.editor.buffer = ch.to_ascii_uppercase().to_string();
-            }
-        } else if self.editor.in_progress {
-            // If other bytes got selected - clear and return
-            if !self.editor.is_addr_same(self.selection.range) {
-                self.editor.clear();
-            }
-
-            if let Some(ch) = typed_char {
-                self.editor.buffer.insert(1, ch);
-            }
-
-            // Allow only hex chars
-            self.editor.buffer.retain(|c| c.is_ascii_hexdigit());
-
-            // When two hex chars are entered - commit automatically
-            if self.editor.buffer.len() == 2 {
-                if let Ok(value) = u8::from_str_radix(&self.editor.buffer, 16)
-                    && let Some([start, end]) = self.editor.addr
-                {
-                    // Handle reversed range
-                    let (s, e) = if start <= end {
-                        (start, end)
-                    } else {
-                        (end, start)
-                    };
-                    // Update the bytes in the map
-                    for addr in s..=e {
-                        if let Some(byte) = self.byte_addr_map.get_mut(&addr) {
-                            *byte = value;
-                        }
-                    }
-                }
-                self.editor.clear();
-            }
-        }
-    }
-
     pub(crate) fn show_central_workspace(&mut self, ctx: &egui::Context) {
         // LEFT PANEL
         egui::SidePanel::left("left_panel")
@@ -67,12 +17,12 @@ impl HexViewer {
                         self.show_file_info_contents(ui);
                         ui.add_space(5.0);
                     });
-                // DATA INSPECTOR
-                egui::CollapsingHeader::new("Data Inspector")
+                // JUMP TO ADDRESS
+                egui::CollapsingHeader::new("Jump To Address")
                     .default_open(true)
                     .show(ui, |ui| {
                         ui.add_space(5.0);
-                        self.show_data_inspector_contents(ui);
+                        self.show_jumpto_contents(ui);
                         ui.add_space(5.0);
                     });
                 // SEARCH
@@ -83,20 +33,27 @@ impl HexViewer {
                         self.show_search_contents(ui);
                         ui.add_space(5.0);
                     });
+                // DATA INSPECTOR
+                egui::CollapsingHeader::new("Data Inspector")
+                    .default_open(true)
+                    .show(ui, |ui| {
+                        ui.add_space(5.0);
+                        self.show_data_inspector_contents(ui);
+                        ui.add_space(5.0);
+                    });
             });
 
         // CENTRAL VIEW
         egui::CentralPanel::default().show(ctx, |ui| {
-            let bytes_per_row = 16;
-            let total_rows = (self.max_addr - self.min_addr).div_ceil(bytes_per_row);
+            self.bytes_per_row = 16;
+            let total_rows =
+                (self.addr_range.end - self.addr_range.start).div_ceil(self.bytes_per_row);
+
             // Get row height in pixels (depends on font size)
             let row_height = ui.text_style_height(&egui::TextStyle::Monospace);
-            // Create scroll area. Scroll if search is triggered.
-            let mut scroll_area = egui::ScrollArea::vertical();
-            if self.search.scroll_addr.is_some() {
-                let offset = self.get_scroll_offset(ui, bytes_per_row);
-                scroll_area = scroll_area.vertical_scroll_offset(offset);
-            }
+
+            // Create scroll area. Scroll if search or addr jump is triggered.
+            let scroll_area = self.create_scroll_area(ui);
 
             scroll_area
                 .scroll_source(egui::containers::scroll_area::ScrollSource {
@@ -129,8 +86,8 @@ impl HexViewer {
                     for row in row_range {
                         ui.horizontal(|ui| {
                             // Start and end addresses
-                            let start = self.min_addr + row * bytes_per_row;
-                            let end = start + bytes_per_row;
+                            let start = self.addr_range.start + row * self.bytes_per_row;
+                            let end = start + self.bytes_per_row;
 
                             // Display address (fixed width, monospaced)
                             ui.monospace(format!("{:08X}", start));

@@ -1,13 +1,16 @@
-mod editor;
+mod byteedit;
 mod hexviewer;
 mod selection;
 mod ui_error;
 mod ui_events;
 mod ui_fileinfo;
 mod ui_inspector;
+mod ui_jumpto;
+mod ui_scrollarea;
 mod ui_search;
 mod ui_topbar;
 mod ui_workspace;
+mod utils;
 
 use eframe::egui;
 use eframe::egui::ViewportBuilder;
