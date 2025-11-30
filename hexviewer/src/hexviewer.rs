@@ -33,6 +33,8 @@ pub struct HexViewer {
     pub jump_to: JumpTo,
     /// Last frame time (for capping app's FPS)
     pub(crate) last_frame_time: Instant,
+    /// ?
+    pub first_row: i64,
 }
 
 impl Default for HexViewer {
@@ -48,6 +50,7 @@ impl Default for HexViewer {
             search: Search::default(),
             jump_to: JumpTo::default(),
             last_frame_time: Instant::now(),
+            first_row: 0,
         }
     }
 }
