@@ -271,6 +271,16 @@ impl IntelHex {
         self.buffer.clone()
     }
 
+    // TODO
+    pub fn get_min_addr(&self) -> usize {
+        *self.buffer.keys().min().unwrap()
+    }
+
+    // TODO
+    pub fn get_max_addr(&self) -> usize {
+        *self.buffer.keys().max().unwrap()
+    }
+
     /// Get byte from IntelHex at provided address.
     ///
     /// # Example

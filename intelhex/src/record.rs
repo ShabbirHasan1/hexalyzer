@@ -90,7 +90,12 @@ impl Record {
         let length = data.len();
 
         // Create a vector of data for checksum calculation
-        let mut v = vec![length as u8, (address >> 8) as u8, (address & 0xFF) as u8];
+        let mut v = vec![
+            length as u8,
+            (address >> 8) as u8,
+            (address & 0xFF) as u8,
+            rtype as u8,
+        ];
         v.extend_from_slice(data);
 
         // Checksum
@@ -134,9 +139,10 @@ impl Record {
 
                 // Create record string
                 let record = format!(
-                    ":{:02X}{:04X}00{}{:02X}",
+                    ":{:02X}{:04X}{:02X}{}{:02X}",
                     length,
                     address,
+                    rtype as u8,
                     data.iter()
                         .map(|b| format!("{:02X}", b))
                         .collect::<String>(),
@@ -162,7 +168,7 @@ impl Record {
 
                 // Create record string
                 let record = format!(
-                    ":{:02X}{:04X}{}{}{:02X}",
+                    ":{:02X}{:04X}{:02X}{}{:02X}",
                     length,
                     address,
                     rtype as u8,
