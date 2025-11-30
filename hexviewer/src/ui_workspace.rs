@@ -45,7 +45,6 @@ impl HexViewer {
 
         // CENTRAL VIEW
         egui::CentralPanel::default().show(ctx, |ui| {
-            self.bytes_per_row = 16;
             let total_rows =
                 (self.addr_range.end - self.addr_range.start).div_ceil(self.bytes_per_row);
 
@@ -98,7 +97,7 @@ impl HexViewer {
                             // Hex bytes representation row
                             for addr in start..end {
                                 // Determine is the current byte selected
-                                let byte = self.byte_addr_map.get(&addr).copied();
+                                let byte = self.ih.get_byte(addr);
                                 let is_selected =
                                     byte.is_some() && self.selection.is_addr_within_range(addr);
 
@@ -162,7 +161,7 @@ impl HexViewer {
                             // ASCII representation row
                             for addr in start..end {
                                 // Determine display char
-                                let byte = self.byte_addr_map.get(&addr).copied();
+                                let byte = self.ih.get_byte(addr);
                                 let ch = if let Some(b) = byte {
                                     if b.is_ascii_graphic() { b as char } else { '.' }
                                 } else {

@@ -74,11 +74,15 @@ impl HexViewer {
                 }
 
                 let sel = self.selection.range.as_ref().unwrap();
-                let mut bytes: Vec<u8> = self
-                    .byte_addr_map
-                    .range(sel.iter().min().unwrap()..=sel.iter().max().unwrap())
-                    .map(|(_, &b)| b)
-                    .collect();
+                let min = *sel.iter().min().unwrap();
+                let max = *sel.iter().max().unwrap();
+
+                let mut bytes: Vec<u8> = Vec::new();
+                for addr in min..=max {
+                    if let Some(b) = self.ih.get_byte(addr) {
+                        bytes.push(b);
+                    }
+                }
 
                 if self.endianness == Endianness::Big && bytes.len() > 1 {
                     bytes.reverse();

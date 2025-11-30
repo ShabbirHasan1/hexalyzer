@@ -31,7 +31,7 @@ impl HexViewer {
                 let pattern = parse_hex_str_into_vec(self.search.input.as_str());
                 if let Some(p) = pattern {
                     // If pattern valid -> search
-                    self.search.results = search_bmh(&self.byte_addr_map, &p);
+                    self.search.results = search_bmh(&self.ih.to_btree_map(), &p);
                 } else {
                     // If pattern not valid -> clear results
                     self.search.results.clear();

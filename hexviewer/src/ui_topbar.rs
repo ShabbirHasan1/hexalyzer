@@ -1,6 +1,5 @@
 use crate::HexViewer;
 use eframe::egui;
-// use eframe::egui::debug_text::print;
 use intelhex::IntelHex;
 
 impl HexViewer {
@@ -21,15 +20,9 @@ impl HexViewer {
                             self.error = Some(msg.to_string());
                         } else {
                             self.ih = ih.unwrap();
-                            // Clear the map if another hex was loaded before
-                            self.byte_addr_map.clear();
-                            // Fill data array (TODO: don't store the data at all - access directly via ih)
-                            for (addr, byte) in &self.ih.to_btree_map() {
-                                self.byte_addr_map.insert(*addr, *byte);
-                            }
-                            // Fill address
-                            self.addr_range.start = *self.byte_addr_map.keys().min().unwrap();
-                            self.addr_range.end = *self.byte_addr_map.keys().max().unwrap();
+                            // Fill min/max address
+                            self.addr_range.start = self.ih.get_min_addr();
+                            self.addr_range.end = self.ih.get_max_addr();
                         }
                     }
 
@@ -37,19 +30,6 @@ impl HexViewer {
                     if ui.button("Export").clicked()
                         && let Some(path) = rfd::FileDialog::new().set_title("Save As").save_file()
                     {
-                        // TODO: handle saving going wrong
-                        // TODO: implement proper solution
-                        let vec: Vec<(usize, u8)> =
-                            self.byte_addr_map.iter().map(|(&k, &v)| (k, v)).collect();
-                        match self.ih.update_buffer_slice(vec.as_slice()) {
-                            Ok(_) => {}
-                            Err(msg) => {
-                                self.error = Some(msg.to_string());
-                            }
-                        }
-
-                        // println!("{:?}", self.byte_addr_map);
-
                         match self.ih.write_hex(path) {
                             Ok(_) => {}
                             Err(msg) => {

@@ -15,6 +15,7 @@ mod utils;
 use eframe::egui;
 use eframe::egui::ViewportBuilder;
 use hexviewer::HexViewer;
+use std::time::{Duration, Instant};
 
 pub mod colors {
     use eframe::egui::Color32;
@@ -42,6 +43,18 @@ fn main() -> eframe::Result<()> {
 
 impl eframe::App for HexViewer {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // Cap the FPS to 30
+        let target_dt = Duration::from_secs_f64(1.0 / 60.0);
+        let elapsed = Instant::now() - self.last_frame_time;
+
+        // debug fps
+        println!("fps={:.1}", 1.0 / elapsed.as_secs_f64());
+
+        if elapsed < target_dt {
+            std::thread::sleep(target_dt - elapsed);
+        }
+        self.last_frame_time = Instant::now();
+
         self.show_top_bar(ctx);
         if self.error.is_some() {
             self.show_error_popup(ctx);

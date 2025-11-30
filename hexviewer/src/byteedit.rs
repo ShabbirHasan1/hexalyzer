@@ -65,9 +65,8 @@ impl HexViewer {
                     };
                     // Update the bytes in the map
                     for addr in s..=e {
-                        if let Some(byte) = self.byte_addr_map.get_mut(&addr) {
-                            *byte = value;
-                        }
+                        // Ignore error (in case of addr gap...) TODO: improve
+                        self.ih.update_byte(addr, value).ok();
                     }
                 }
                 self.editor.clear();
