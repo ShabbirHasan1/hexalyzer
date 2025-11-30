@@ -8,14 +8,22 @@ pub(crate) struct ByteEdit {
     pub(crate) buffer: String,
     /// Address range of the bytes being edited
     pub(crate) addr: Option<[usize; 2]>,
+    /// Tracks the modified bytes
+    pub(crate) modified: Vec<usize>,
 }
 
 impl ByteEdit {
-    /// Clear the editor (edit process complete/canceled)
+    /// Clear the editor when edit process complete/canceled
     pub(crate) fn clear(&mut self) {
         self.in_progress = false;
         self.addr = None;
         self.buffer.clear();
+    }
+
+    /// Reset the state of the editor when hex is closed / new hex loaded
+    pub(crate) fn reset(&mut self) {
+        self.clear();
+        self.modified.clear();
     }
 
     /// Is provided address same as being edited
@@ -63,10 +71,15 @@ impl HexViewer {
                     } else {
                         (end, start)
                     };
-                    // Update the bytes in the map
+                    // Update the bytes in the map. If the byte is actually changed -
+                    // insert its address into Vec that tracks modified bytes.
                     for addr in s..=e {
-                        // Ignore error (in case of addr gap...) TODO: improve
-                        self.ih.update_byte(addr, value).ok();
+                        let prev_value = self.ih.get_byte(addr);
+                        if let Some(_) = self.ih.update_byte(addr, value).ok()
+                            && value != prev_value.unwrap()
+                        {
+                            self.editor.modified.push(addr);
+                        }
                     }
                 }
                 self.editor.clear();

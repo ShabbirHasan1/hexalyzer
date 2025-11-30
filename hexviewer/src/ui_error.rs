@@ -1,4 +1,4 @@
-use crate::{HexViewer, colors};
+use crate::{HexViewer, color};
 use eframe::egui;
 
 impl HexViewer {
@@ -19,7 +19,7 @@ impl HexViewer {
             egui::Order::Background,
             egui::Id::new("modal_bg"),
         ));
-        painter.rect_filled(content_rect, 0.0, colors::SHADOW);
+        painter.rect_filled(content_rect, 0.0, color::SHADOW);
 
         // Display the pop-up
         egui::Window::new("Error")

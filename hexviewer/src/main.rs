@@ -17,11 +17,12 @@ use eframe::egui::ViewportBuilder;
 use hexviewer::HexViewer;
 use std::time::{Duration, Instant};
 
-pub mod colors {
+pub mod color {
     use eframe::egui::Color32;
 
     pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
     pub const LIGHT_BLUE: Color32 = Color32::from_rgba_premultiplied(33, 81, 109, 20);
+    pub const MUD: Color32 = Color32::from_rgba_premultiplied(54, 44, 19, 20);
     pub const GRAY_160: Color32 = Color32::from_gray(160);
     pub const GRAY_210: Color32 = Color32::from_gray(210);
     pub const SHADOW: Color32 = Color32::from_black_alpha(150);

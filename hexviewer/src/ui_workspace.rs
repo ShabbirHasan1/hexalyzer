@@ -1,5 +1,5 @@
 use crate::ui_events::EventManager;
-use crate::{HexViewer, colors};
+use crate::{HexViewer, color};
 use eframe::egui;
 use std::ops::Range;
 
@@ -120,9 +120,9 @@ impl HexViewer {
 
                 // Change color of every other byte for better readability
                 let bg_color = if addr % 2 == 0 {
-                    colors::GRAY_210
+                    color::GRAY_210
                 } else {
-                    colors::GRAY_160
+                    color::GRAY_160
                 };
 
                 // Determine display value of the byte
@@ -145,7 +145,7 @@ impl HexViewer {
                             .size(12.0)
                             .color(bg_color),
                     )
-                    .fill(colors::TRANSPARENT),
+                    .fill(color::TRANSPARENT),
                 );
 
                 // Update the selection range
@@ -157,11 +157,8 @@ impl HexViewer {
                     self.selection.update(addr);
                 }
 
-                // Highlight byte if selected
-                if is_selected {
-                    ui.painter()
-                        .rect_filled(button.rect, 0.0, colors::LIGHT_BLUE);
-                }
+                // Highlight byte if selected or modified
+                self.highlight_widget(ui, &button, addr, is_selected);
 
                 // Add space every 8 bytes
                 if (addr + 1) % 8 == 0 {
@@ -191,7 +188,7 @@ impl HexViewer {
                 // Show char as label
                 let label = ui.add(egui::Label::new(
                     egui::RichText::new(ch.to_string())
-                        .color(colors::GRAY_160)
+                        .color(color::GRAY_160)
                         .monospace(),
                 ));
 
@@ -204,12 +201,24 @@ impl HexViewer {
                     self.selection.update(addr);
                 }
 
-                // Highlight char if selected
-                if is_selected {
-                    ui.painter()
-                        .rect_filled(label.rect, 0.0, colors::LIGHT_BLUE);
-                }
+                // Highlight char if selected or modified
+                self.highlight_widget(ui, &label, addr, is_selected);
             }
         });
+    }
+
+    fn highlight_widget(
+        &self,
+        ui: &mut egui::Ui,
+        widget: &egui::Response,
+        addr: usize,
+        is_selected: bool,
+    ) {
+        if is_selected {
+            ui.painter()
+                .rect_filled(widget.rect, 0.0, color::LIGHT_BLUE);
+        } else if self.editor.modified.contains(&addr) {
+            ui.painter().rect_filled(widget.rect, 0.0, color::MUD);
+        }
     }
 }

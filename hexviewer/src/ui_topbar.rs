@@ -20,6 +20,7 @@ impl HexViewer {
                             self.error = Some(msg.to_string());
                         } else {
                             self.ih = ih.unwrap();
+                            self.editor.reset();
                             // Fill min/max address
                             self.addr_range.start = self.ih.get_min_addr();
                             self.addr_range.end = self.ih.get_max_addr();
