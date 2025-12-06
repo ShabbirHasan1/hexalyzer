@@ -40,11 +40,25 @@ impl HexViewer {
                     }
                 });
 
-                // TODO: HELP BUTTON
-                ui.menu_button("Help", |ui| {
-                    if ui.button("About").clicked() {
-                        println!("About clicked");
-                    }
+                // ABOUT BUTTON
+                let about_button = ui.button("About");
+
+                if about_button.clicked() {
+                    self.help_menu_open = true;
+                }
+
+                let window = egui::Window::new("About")
+                    .open(&mut self.help_menu_open)
+                    .collapsible(false)
+                    .resizable(false)
+                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]);
+                    // .title_bar(false);
+
+                window.show(ctx, |ui| {
+                    ui.vertical(|ui| {
+                        ui.label("IntelHex");
+                        ui.label("...");
+                    });
                 });
             });
         });

@@ -31,6 +31,8 @@ pub struct HexViewer {
     pub search: Search,
     /// Handler for GUI feature to jump to selected address
     pub jump_to: JumpTo,
+    /// Is help menu
+    pub help_menu_open: bool,
     /// Last frame time (for capping app's FPS)
     pub(crate) last_frame_time: Instant,
 }
@@ -40,13 +42,14 @@ impl Default for HexViewer {
         Self {
             ih: IntelHex::default(),
             addr_range: Range::default(),
-            bytes_per_row: 16,
+            bytes_per_row: 32,
             endianness: Endianness::Little,
             error: None,
             editor: ByteEdit::default(),
             selection: Selection::default(),
             search: Search::default(),
             jump_to: JumpTo::default(),
+            help_menu_open: false,
             last_frame_time: Instant::now(),
         }
     }

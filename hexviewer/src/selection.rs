@@ -27,4 +27,9 @@ impl Selection {
         let sel = self.range.get_or_insert([addr, addr]);
         sel[1] = addr;
     }
+
+    pub(crate) fn clear(&mut self) {
+        self.range = None;
+        self.released = false;
+    }
 }

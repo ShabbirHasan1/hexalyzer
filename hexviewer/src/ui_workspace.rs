@@ -83,8 +83,11 @@ impl HexViewer {
         // Update byte edit buffer base on the key press
         self.update_edit_buffer(typed_char);
 
-        // Cancel byte editing on Esc press
+        // Cancel byte editing / selection on Esc press
         if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+            if !self.editor.in_progress {
+                self.selection.clear();
+            }
             self.editor.clear()
         }
 
@@ -139,13 +142,13 @@ impl HexViewer {
                 // Show byte as a button
                 let button = ui.add_sized(
                     [21.0, 18.0],
-                    egui::Button::new(
+                    egui::Label::new(
                         egui::RichText::new(display_value)
                             .monospace()
                             .size(12.0)
                             .color(bg_color),
                     )
-                    .fill(color::TRANSPARENT),
+                    // .fill(color::TRANSPARENT),
                 );
 
                 // Update the selection range
@@ -191,6 +194,9 @@ impl HexViewer {
                         .color(color::GRAY_160)
                         .monospace(),
                 ));
+
+                // Make space between labels as small as possible
+                ui.add_space(-4.0);
 
                 // Update the selection range
                 if pointer_down
