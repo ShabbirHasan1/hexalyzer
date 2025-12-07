@@ -65,7 +65,6 @@ impl eframe::App for HexViewer {
 }
 
 // TODO for MVP:
-// Add line with failure in error popup
 // Verify export works OK
 // Add content to help
 // Verify performance acceptable (cap if needed)

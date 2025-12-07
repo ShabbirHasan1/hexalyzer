@@ -1,7 +1,8 @@
 //! The 'record' module defines the ['Record'] and ['RecordType'] which are used for parsing
 //! (and generating) Intel HEX records.
 
-use crate::error::IntelHexError;
+use crate::IntelHexError;
+use crate::error::IntelHexErrorKind;
 use std::ops::Add;
 
 mod ranges {
@@ -28,7 +29,7 @@ pub enum RecordType {
 }
 
 impl RecordType {
-    fn parse(s: &str) -> Result<Self, IntelHexError> {
+    fn parse(s: &str) -> Result<Self, IntelHexErrorKind> {
         match s {
             "00" => Ok(Self::Data),
             "01" => Ok(Self::EndOfFile),
@@ -36,7 +37,7 @@ impl RecordType {
             "03" => Ok(Self::StartSegmentAddress),
             "04" => Ok(Self::ExtendedLinearAddress),
             "05" => Ok(Self::StartLinearAddress),
-            _ => Err(IntelHexError::InvalidRecordType),
+            _ => Err(IntelHexErrorKind::InvalidRecordType),
         }
     }
 }
@@ -90,7 +91,12 @@ impl Record {
         let length = data.len();
 
         // Create a vector of data for checksum calculation
-        let mut v = vec![length as u8, (address >> 8) as u8, (address & 0xFF) as u8];
+        let mut v = vec![
+            length as u8,
+            (address >> 8) as u8,
+            (address & 0xFF) as u8,
+            rtype as u8,
+        ];
         v.extend_from_slice(data);
 
         // Checksum
@@ -100,7 +106,9 @@ impl Record {
             RecordType::Data => {
                 // Check for data length
                 if length > u8::MAX as usize {
-                    return Err(IntelHexError::RecordTooLong);
+                    return Err(IntelHexError::CreateRecordError(
+                        IntelHexErrorKind::RecordTooLong,
+                    ));
                 }
 
                 // Create record string
@@ -120,49 +128,21 @@ impl Record {
             RecordType::ExtendedLinearAddress => {
                 // Check for data length (has to be 1 byte)
                 if length != 2 {
-                    return Err(IntelHexError::RecordLengthInvalidForType(rtype, 2, length));
+                    return Err(IntelHexError::CreateRecordError(
+                        IntelHexErrorKind::RecordLengthInvalidForType(rtype, 2, length),
+                    ));
                 }
 
                 // Check for address (has to be 0x0)
                 if address != 0 {
-                    return Err(IntelHexError::RecordAddressInvalidForType(
-                        rtype,
-                        0,
-                        address as usize,
+                    return Err(IntelHexError::CreateRecordError(
+                        IntelHexErrorKind::RecordAddressInvalidForType(rtype, 0, address as usize),
                     ));
                 }
 
                 // Create record string
                 let record = format!(
-                    ":{:02X}{:04X}00{}{:02X}",
-                    length,
-                    address,
-                    data.iter()
-                        .map(|b| format!("{:02X}", b))
-                        .collect::<String>(),
-                    checksum
-                );
-
-                Ok(record)
-            }
-            RecordType::StartLinearAddress | RecordType::StartSegmentAddress => {
-                // Check for data length
-                if length != 4 {
-                    return Err(IntelHexError::RecordLengthInvalidForType(rtype, 4, length));
-                }
-
-                // Check for address
-                if address != 0 {
-                    return Err(IntelHexError::RecordAddressInvalidForType(
-                        rtype,
-                        0,
-                        address as usize,
-                    ));
-                }
-
-                // Create record string
-                let record = format!(
-                    ":{:02X}{:04X}{}{}{:02X}",
+                    ":{:02X}{:04X}{:02X}{}{:02X}",
                     length,
                     address,
                     rtype as u8,
@@ -174,16 +154,47 @@ impl Record {
 
                 Ok(record)
             }
-            RecordType::ExtendedSegmentAddress => Err(IntelHexError::RecordNotSupported),
+            RecordType::StartLinearAddress | RecordType::StartSegmentAddress => {
+                // Check for data length
+                if length != 4 {
+                    return Err(IntelHexError::CreateRecordError(
+                        IntelHexErrorKind::RecordLengthInvalidForType(rtype, 4, length),
+                    ));
+                }
+
+                // Check for address
+                if address != 0 {
+                    return Err(IntelHexError::CreateRecordError(
+                        IntelHexErrorKind::RecordAddressInvalidForType(rtype, 0, address as usize),
+                    ));
+                }
+
+                // Create record string
+                let record = format!(
+                    ":{:02X}{:04X}{:02X}{}{:02X}",
+                    length,
+                    address,
+                    rtype as u8,
+                    data.iter()
+                        .map(|b| format!("{:02X}", b))
+                        .collect::<String>(),
+                    checksum
+                );
+
+                Ok(record)
+            }
+            RecordType::ExtendedSegmentAddress => Err(IntelHexError::CreateRecordError(
+                IntelHexErrorKind::RecordNotSupported,
+            )),
         }
     }
 
     /// Parse the record string into Record.
     ///
-    pub(crate) fn parse(line: &str) -> Result<Self, IntelHexError> {
+    pub(crate) fn parse(line: &str) -> Result<Self, IntelHexErrorKind> {
         // Check for start record
         if !line.starts_with(':') {
-            return Err(IntelHexError::MissingStartCode);
+            return Err(IntelHexErrorKind::MissingStartCode);
         }
 
         let hexdigit_part = &line[1..];
@@ -191,16 +202,16 @@ impl Record {
 
         // Validate all characters are hexadecimal
         if !hexdigit_part.chars().all(|ch| ch.is_ascii_hexdigit()) {
-            return Err(IntelHexError::ContainsInvalidCharacters);
+            return Err(IntelHexErrorKind::ContainsInvalidCharacters);
         }
 
         // Validate record's size
         if hexdigit_part_len < sizes::SMALLEST_RECORD {
-            return Err(IntelHexError::RecordTooShort);
+            return Err(IntelHexErrorKind::RecordTooShort);
         } else if hexdigit_part_len > sizes::LARGEST_RECORD {
-            return Err(IntelHexError::RecordTooLong);
+            return Err(IntelHexErrorKind::RecordTooLong);
         } else if !hexdigit_part_len.is_multiple_of(2) {
-            return Err(IntelHexError::RecordNotEvenLength);
+            return Err(IntelHexErrorKind::RecordNotEvenLength);
         }
 
         // Get record length
@@ -210,7 +221,7 @@ impl Record {
         let data_end = ranges::RECORD_TYPE_RANGE.end + sizes::BYTE_CHAR_LEN * length as usize;
         let record_end = sizes::BYTE_CHAR_LEN + data_end; // last byte is checksum
         if record_end != line.len() {
-            return Err(IntelHexError::RecordInvalidPayloadLength);
+            return Err(IntelHexErrorKind::RecordInvalidPayloadLength);
         }
 
         // Get record type
@@ -223,7 +234,7 @@ impl Record {
         match rtype {
             RecordType::EndOfFile => {
                 if length != 0 {
-                    return Err(IntelHexError::RecordLengthInvalidForType(
+                    return Err(IntelHexErrorKind::RecordLengthInvalidForType(
                         rtype,
                         0,
                         length as usize,
@@ -232,7 +243,7 @@ impl Record {
             }
             RecordType::ExtendedSegmentAddress | RecordType::ExtendedLinearAddress => {
                 if length != 2 {
-                    return Err(IntelHexError::RecordLengthInvalidForType(
+                    return Err(IntelHexErrorKind::RecordLengthInvalidForType(
                         rtype,
                         2,
                         length as usize,
@@ -241,7 +252,7 @@ impl Record {
             }
             RecordType::StartSegmentAddress | RecordType::StartLinearAddress => {
                 if length != 4 {
-                    return Err(IntelHexError::RecordLengthInvalidForType(
+                    return Err(IntelHexErrorKind::RecordLengthInvalidForType(
                         rtype,
                         4,
                         length as usize,
@@ -251,7 +262,7 @@ impl Record {
             _ => {}
         }
         if !matches!(rtype, RecordType::Data) && address != 0 {
-            return Err(IntelHexError::RecordAddressInvalidForType(
+            return Err(IntelHexErrorKind::RecordAddressInvalidForType(
                 rtype,
                 0,
                 address as usize,
@@ -278,7 +289,7 @@ impl Record {
         };
         let calc_checksum = Self::calculate_checksum_from_self(&_self);
         if calc_checksum != checksum {
-            return Err(IntelHexError::RecordChecksumMismatch(
+            return Err(IntelHexErrorKind::RecordChecksumMismatch(
                 calc_checksum,
                 checksum,
             ));
@@ -292,94 +303,100 @@ impl Record {
 mod tests {
     use super::*;
 
-    /// Returns valid instances of Record
+    /// Returns valid instances of Record and corresponding str representation
     ///
-    fn get_valid_struct_records() -> [Record; 5] {
+    fn get_valid_records() -> [(Record, &'static str); 5] {
         [
-            Record {
-                length: 0x10,
-                address: 0x0100,
-                rtype: RecordType::Data,
-                data: vec![
-                    0x21, 0x46, 0x01, 0x36, 0x01, 0x21, 0x47, 0x01, 0x36, 0x00, 0x7E, 0xFE, 0x09,
-                    0xD2, 0x19, 0x01,
-                ],
-                checksum: 0x40,
-            },
-            Record {
-                length: 0x10,
-                address: 0x0110,
-                rtype: RecordType::Data,
-                data: vec![
-                    0x21, 0x46, 0x01, 0x7E, 0x17, 0xC2, 0x00, 0x01, 0xFF, 0x5F, 0x16, 0x00, 0x21,
-                    0x48, 0x01, 0x19,
-                ],
-                checksum: 0x28,
-            },
-            Record {
-                length: 0x00,
-                address: 0x0000,
-                rtype: RecordType::EndOfFile,
-                data: vec![],
-                checksum: 0xFF,
-            },
-            Record {
-                length: 0x02,
-                address: 0x0000,
-                rtype: RecordType::ExtendedSegmentAddress,
-                data: vec![0x12, 0x00],
-                checksum: 0xEA,
-            },
-            Record {
-                length: 0x02,
-                address: 0x0000,
-                rtype: RecordType::ExtendedLinearAddress,
-                data: vec![0x00, 0x03],
-                checksum: 0xF7,
-            },
-        ]
-    }
-
-    /// Returns valid record strings
-    ///
-    fn get_valid_str_records() -> [&'static str; 5] {
-        [
-            ":10010000214601360121470136007EFE09D2190140",
-            ":100110002146017E17C20001FF5F16002148011928",
-            ":00000001FF",
-            ":020000021200EA",
-            ":020000040003F7",
+            (
+                Record {
+                    length: 0x10,
+                    address: 0x0100,
+                    rtype: RecordType::Data,
+                    data: vec![
+                        0x21, 0x46, 0x01, 0x36, 0x01, 0x21, 0x47, 0x01, 0x36, 0x00, 0x7E, 0xFE,
+                        0x09, 0xD2, 0x19, 0x01,
+                    ],
+                    checksum: 0x40,
+                },
+                ":10010000214601360121470136007EFE09D2190140",
+            ),
+            (
+                Record {
+                    length: 0x10,
+                    address: 0x0110,
+                    rtype: RecordType::Data,
+                    data: vec![
+                        0x21, 0x46, 0x01, 0x7E, 0x17, 0xC2, 0x00, 0x01, 0xFF, 0x5F, 0x16, 0x00,
+                        0x21, 0x48, 0x01, 0x19,
+                    ],
+                    checksum: 0x28,
+                },
+                ":100110002146017E17C20001FF5F16002148011928",
+            ),
+            (
+                Record {
+                    length: 0x00,
+                    address: 0x0000,
+                    rtype: RecordType::EndOfFile,
+                    data: vec![],
+                    checksum: 0xFF,
+                },
+                ":00000001FF",
+            ),
+            (
+                Record {
+                    length: 0x02,
+                    address: 0x0000,
+                    rtype: RecordType::ExtendedSegmentAddress,
+                    data: vec![0x12, 0x00],
+                    checksum: 0xEA,
+                },
+                ":020000021200EA",
+            ),
+            (
+                Record {
+                    length: 0x02,
+                    address: 0x0000,
+                    rtype: RecordType::ExtendedLinearAddress,
+                    data: vec![0x00, 0x03],
+                    checksum: 0xF7,
+                },
+                ":020000040003F7",
+            ),
         ]
     }
 
     /// Returns invalid record strings and corresponding errors
     ///
-    fn get_invalid_str_records() -> [(&'static str, IntelHexError); 9] {
+    fn get_invalid_str_records() -> [(&'static str, IntelHexErrorKind); 9] {
         [
             // Removed ':' from record str
-            ("00000001FF", IntelHexError::MissingStartCode),
+            ("00000001FF", IntelHexErrorKind::MissingStartCode),
             // Payload shorter that record length byte
-            (":100000000000FF", IntelHexError::RecordInvalidPayloadLength),
+            (
+                ":100000000000FF",
+                IntelHexErrorKind::RecordInvalidPayloadLength,
+            ),
             // Payload longer that record length byte
             (
                 ":02000000000000FF",
-                IntelHexError::RecordInvalidPayloadLength,
+                IntelHexErrorKind::RecordInvalidPayloadLength,
             ),
             // EOF record with fewer chars
-            (":0000FF", IntelHexError::RecordTooShort),
+            (":0000FF", IntelHexErrorKind::RecordTooShort),
             // EOF record with extra '0' added
-            (":000000001FF", IntelHexError::RecordNotEvenLength),
+            (":000000001FF", IntelHexErrorKind::RecordNotEvenLength),
             // Char 'Z' is not a hex digit
-            (":0000000ZFF", IntelHexError::ContainsInvalidCharacters),
+            (":0000000ZFF", IntelHexErrorKind::ContainsInvalidCharacters),
             // Checksum wrong - should be 0xF0
             (
                 ":1000000000000000000000000000000000000000AA",
-                IntelHexError::RecordChecksumMismatch(0xF0, 0xAA),
+                IntelHexErrorKind::RecordChecksumMismatch(0xF0, 0xAA),
             ),
             // Address non-zero for extended segment addr record
             (
                 ":020100021200EA",
-                IntelHexError::RecordAddressInvalidForType(
+                IntelHexErrorKind::RecordAddressInvalidForType(
                     RecordType::ExtendedSegmentAddress,
                     0,
                     0x0100,
@@ -388,7 +405,7 @@ mod tests {
             // Address non-zero for extended linear addr record
             (
                 ":020100041200EA",
-                IntelHexError::RecordAddressInvalidForType(
+                IntelHexErrorKind::RecordAddressInvalidForType(
                     RecordType::ExtendedLinearAddress,
                     0,
                     0x0100,
@@ -417,40 +434,31 @@ mod tests {
     fn test_parse_invalid_record_type() {
         assert_eq!(
             RecordType::parse("0"),
-            Err(IntelHexError::InvalidRecordType)
+            Err(IntelHexErrorKind::InvalidRecordType)
         );
         assert_eq!(
             RecordType::parse("1"),
-            Err(IntelHexError::InvalidRecordType)
+            Err(IntelHexErrorKind::InvalidRecordType)
         );
         assert_eq!(
             RecordType::parse("06"),
-            Err(IntelHexError::InvalidRecordType)
+            Err(IntelHexErrorKind::InvalidRecordType)
         );
         assert_eq!(
             RecordType::parse("AB"),
-            Err(IntelHexError::InvalidRecordType)
+            Err(IntelHexErrorKind::InvalidRecordType)
         );
         assert_eq!(
             RecordType::parse("FF"),
-            Err(IntelHexError::InvalidRecordType)
+            Err(IntelHexErrorKind::InvalidRecordType)
         );
     }
 
     #[test]
     fn test_calculate_checksum() {
-        // Each tuple = (record line, expected checksum)
-        let cases = [
-            (":10010000214601360121470136007EFE09D2190140", 0x40),
-            (":100110002146017E17C20001FF5F16002148011928", 0x28),
-            (":00000001FF", 0xFF),
-            (":020000021200EA", 0xEA),
-            (":020000040003F7", 0xF7),
-        ];
-
-        for (record, expected_checksum) in cases {
+        for (rec, rec_str) in get_valid_records() {
             // Strip information not used for checksum calculation
-            let trimmed_record = &record[1..record.len() - 2];
+            let trimmed_record = &rec_str[1..rec_str.len() - 2];
 
             // Convert to byte Vec
             let bytes: Vec<u8> = (0..trimmed_record.len())
@@ -458,14 +466,13 @@ mod tests {
                 .map(|i| u8::from_str_radix(&trimmed_record[i..i + 2], 16).unwrap())
                 .collect();
 
-            assert_eq!(expected_checksum, Record::calculate_checksum(&bytes));
+            assert_eq!(rec.checksum, Record::calculate_checksum(&bytes));
         }
     }
 
     #[test]
     fn test_calculate_checksum_from_self() {
-        let records = get_valid_struct_records();
-        for record in records {
+        for (record, _) in get_valid_records() {
             assert_eq!(
                 record.checksum,
                 Record::calculate_checksum_from_self(&record)
@@ -475,10 +482,8 @@ mod tests {
 
     #[test]
     fn test_parse_valid_records() {
-        let records = get_valid_str_records();
-        let expected_records = get_valid_struct_records();
-        for (rec_str, rec) in records.iter().zip(expected_records.iter()) {
-            assert_eq!(Record::parse(rec_str).unwrap(), *rec);
+        for (rec, rec_str) in get_valid_records() {
+            assert_eq!(Record::parse(rec_str).unwrap(), rec);
         }
     }
 
@@ -488,5 +493,87 @@ mod tests {
         for (record, expected_error) in records_and_errors {
             assert_eq!(Record::parse(record).unwrap_err(), expected_error);
         }
+    }
+
+    #[test]
+    fn test_create_valid_records() {
+        // Data record
+        let data: [u8; 4] = [0, 1, 2, 3];
+        let res = Record::create(16, RecordType::Data, &data);
+        let expected_rec_str = ":0400100000010203E6";
+        assert_eq!(res.unwrap_or("".to_string()), expected_rec_str);
+
+        // Extended Linear Address record
+        let data: [u8; 2] = [0x11, 0x22];
+        let res = Record::create(0, RecordType::ExtendedLinearAddress, &data);
+        let expected_rec_str = ":020000041122C7";
+        assert_eq!(res.unwrap_or("".to_string()), expected_rec_str);
+
+        // End Of File record
+        let res = Record::create(0, RecordType::EndOfFile, &[]);
+        let expected_rec_str = ":00000001FF";
+        assert_eq!(res.unwrap_or("".to_string()), expected_rec_str);
+
+        // Start Linear Address record
+        let data: [u8; 4] = [0x10, 0x43, 0xFF, 0xAA];
+        let res = Record::create(0, RecordType::StartLinearAddress, &data);
+        let expected_rec_str = ":040000051043FFAAFB";
+        assert_eq!(res.unwrap_or("".to_string()), expected_rec_str);
+
+        // Start Segment Address record
+        let data: [u8; 4] = [0x10, 0x43, 0xFF, 0xAA];
+        let res = Record::create(0, RecordType::StartSegmentAddress, &data);
+        let expected_rec_str = ":040000031043FFAAFD";
+        assert_eq!(res.unwrap_or("".to_string()), expected_rec_str);
+    }
+
+    #[test]
+    fn test_create_invalid_records() {
+        // Data record
+        let data = [0; 256];
+        let res = Record::create(0, RecordType::Data, &data);
+        assert_eq!(
+            res.unwrap_err(),
+            IntelHexError::CreateRecordError(IntelHexErrorKind::RecordTooLong)
+        );
+
+        // Extended Linear Address record
+        let data: [u8; 2] = [0x11, 0x22];
+        let res = Record::create(16, RecordType::ExtendedLinearAddress, &data);
+        assert_eq!(
+            res.unwrap_err(),
+            IntelHexError::CreateRecordError(IntelHexErrorKind::RecordAddressInvalidForType(
+                RecordType::ExtendedLinearAddress,
+                0,
+                16
+            ))
+        );
+
+        // End Of File record
+        // No invalid options - always returns the correct String
+
+        // Start Linear Address record
+        let data: [u8; 3] = [0x10, 0x43, 0xFF];
+        let res = Record::create(0, RecordType::StartLinearAddress, &data);
+        assert_eq!(
+            res.unwrap_err(),
+            IntelHexError::CreateRecordError(IntelHexErrorKind::RecordLengthInvalidForType(
+                RecordType::StartLinearAddress,
+                4,
+                data.len()
+            ))
+        );
+
+        // Start Segment Address record
+        let data: [u8; 4] = [0x10, 0x43, 0xFF, 0xAA];
+        let res = Record::create(0xFFFF, RecordType::StartSegmentAddress, &data);
+        assert_eq!(
+            res.unwrap_err(),
+            IntelHexError::CreateRecordError(IntelHexErrorKind::RecordAddressInvalidForType(
+                RecordType::StartSegmentAddress,
+                0,
+                0xFFFF
+            ))
+        );
     }
 }
