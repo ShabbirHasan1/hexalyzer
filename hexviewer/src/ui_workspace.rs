@@ -142,13 +142,13 @@ impl HexViewer {
                 // Show byte as a button
                 let button = ui.add_sized(
                     [21.0, 18.0],
-                    egui::Label::new(
+                    egui::Button::new(
                         egui::RichText::new(display_value)
                             .monospace()
                             .size(12.0)
                             .color(bg_color),
                     )
-                    // .fill(color::TRANSPARENT),
+                    .fill(color::TRANSPARENT),
                 );
 
                 // Update the selection range

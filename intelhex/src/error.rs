@@ -28,7 +28,8 @@ impl fmt::Display for IntelHexError {
             }
             IntelHexError::CreateRecordError(base_err) => {
                 write!(
-                    f, "Error encountered during creation of hex record:\n{}",
+                    f,
+                    "Error encountered during creation of hex record:\n{}",
                     base_err.to_string(),
                 )
             }

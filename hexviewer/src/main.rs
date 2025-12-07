@@ -17,7 +17,7 @@ use eframe::egui::ViewportBuilder;
 use hexviewer::HexViewer;
 use std::time::{Duration, Instant};
 
-pub mod color {
+pub(crate) mod color {
     use eframe::egui::Color32;
 
     pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
