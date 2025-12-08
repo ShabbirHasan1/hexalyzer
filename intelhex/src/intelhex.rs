@@ -7,7 +7,6 @@ use std::collections::BTreeMap;
 use std::error::Error;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::{fs, io};
 
 #[derive(Debug, Clone)]
 pub struct StartAddress {
@@ -66,6 +65,26 @@ impl IntelHex {
             },
             buffer: BTreeMap::new(),
         }
+    }
+
+    /// Clears loaded data from the IntelHex struct instance.
+    ///
+    /// # Examples
+    /// ```
+    /// use intelhex::IntelHex;
+    ///
+    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
+    /// ih.clear();
+    /// ```
+    pub fn clear(&mut self) {
+        self.filepath.clear();
+        self.size = 0;
+        self.start_addr = StartAddress {
+            rtype: None,
+            bytes: None,
+        };
+        self.offset = 0;
+        self.buffer.clear();
     }
 
     /// Parse the raw contents of the hex file and fill internal record vector.
@@ -135,7 +154,7 @@ impl IntelHex {
     /// ```
     /// use intelhex::IntelHex;
     ///
-    /// let ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// ```
     pub fn from_hex<P: AsRef<Path>>(filepath: P) -> Result<Self, Box<dyn Error>> {
         let mut ih = IntelHex::new();
@@ -150,11 +169,14 @@ impl IntelHex {
     /// use intelhex::IntelHex;
     ///
     /// let mut ih = IntelHex::new();
-    /// ih.load_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// ih.load_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// ```
     pub fn load_hex<P: AsRef<Path>>(&mut self, filepath: P) -> Result<(), Box<dyn Error>> {
         // Read contents of the file
-        let raw_contents: String = fs::read_to_string(&filepath)?;
+        let raw_contents: String = std::fs::read_to_string(&filepath)?;
+
+        // Clear provided IntelHex instance
+        self.clear();
 
         // Compute the size (in bytes)
         self.size = raw_contents.len();
@@ -167,29 +189,81 @@ impl IntelHex {
         Ok(())
     }
 
+    /// Creates IntelHex struct instance and fills it with data from provided binary.
+    ///
+    /// # Example
+    /// ```
+    /// use intelhex::IntelHex;
+    ///
+    /// let base_addr = 0x1000;
+    /// let ih = IntelHex::from_bin("tests/fixtures/ih_valid_1.bin", base_addr).unwrap();
+    /// ```
+    pub fn from_bin<P: AsRef<Path>>(
+        filepath: P,
+        base_address: usize,
+    ) -> Result<Self, Box<dyn Error>> {
+        let mut ih = IntelHex::new();
+        ih.load_bin(filepath, base_address)?;
+        Ok(ih)
+    }
+
+    /// Fills the IntelHex struct instance with data from provided binary.
+    ///
+    /// # Example
+    /// ```
+    /// use intelhex::IntelHex;
+    ///
+    /// let mut ih = IntelHex::new();
+    /// let base_addr = 0x1000;
+    /// ih.load_bin("tests/fixtures/ih_valid_1.bin", base_addr).unwrap();
+    /// ```
+    pub fn load_bin<P: AsRef<Path>>(
+        &mut self,
+        filepath: P,
+        base_address: usize,
+    ) -> Result<(), Box<dyn Error>> {
+        // Read contents of the file. Bin only contains data bytes, thus read as Vec<u8>.
+        let data = std::fs::read(&filepath)?;
+
+        // Clear provided IntelHex instance
+        self.clear();
+
+        // Compute the size (in bytes)
+        self.size = data.len();
+
+        // Load filepath
+        self.filepath = filepath.as_ref().to_path_buf();
+
+        // Load data bytes into the map and return
+        for (i, byte) in data.iter().enumerate() {
+            self.buffer.insert(base_address + i, *byte);
+        }
+        Ok(())
+    }
+
     /// Generates an Intel HEX file at the specified path.
     ///
     /// # Example
     /// ```
     /// use intelhex::IntelHex;
     ///
-    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// ih.write_hex("build/ex1/ih.hex");
     /// ```
     pub fn write_hex<P: AsRef<Path>>(&mut self, filepath: P) -> Result<(), Box<dyn Error>> {
         // Ensure the parent directory exists
         if let Some(parent) = filepath.as_ref().parent() {
-            fs::create_dir_all(parent)?;
+            std::fs::create_dir_all(parent)?;
         }
 
-        let file = fs::OpenOptions::new()
+        let file = std::fs::OpenOptions::new()
             .write(true)
             .create(true)
             .truncate(true)
             .open(filepath)?;
 
         // Wrap in BufWriter for efficient line-by-line writing
-        let mut writer = io::BufWriter::new(file);
+        let mut writer = std::io::BufWriter::new(file);
 
         // Write start address record
         // TODO: place it - start or end of file?
@@ -277,7 +351,7 @@ impl IntelHex {
     /// use std::collections::BTreeMap;
     /// use intelhex::IntelHex;
     ///
-    /// let ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let addr_byte_map: BTreeMap<usize, u8> = ih.to_btree_map();
     /// ```
     pub fn to_btree_map(&self) -> BTreeMap<usize, u8> {
@@ -290,7 +364,7 @@ impl IntelHex {
     /// ```
     /// use intelhex::IntelHex;
     ///
-    /// let ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let min_addr: Option<usize> = ih.get_min_addr();
     /// ```
     pub fn get_min_addr(&self) -> Option<usize> {
@@ -303,7 +377,7 @@ impl IntelHex {
     /// ```
     /// use intelhex::IntelHex;
     ///
-    /// let ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let max_addr: Option<usize> = ih.get_max_addr();
     /// ```
     pub fn get_max_addr(&self) -> Option<usize> {
@@ -316,7 +390,7 @@ impl IntelHex {
     /// ```
     /// use intelhex::IntelHex;
     ///
-    /// let ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let b: u8 = ih.get_byte(0x0).unwrap();
     /// ```
     pub fn get_byte(&self, address: usize) -> Option<u8> {
@@ -329,7 +403,7 @@ impl IntelHex {
     /// ```
     /// use intelhex::IntelHex;
     ///
-    /// let ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let b: Vec<u8> = ih.get_buffer_slice(&[0x0, 0x1, 0x2]).unwrap();
     /// ```
     pub fn get_buffer_slice(&self, addr_vec: &[usize]) -> Option<Vec<u8>> {
@@ -351,7 +425,7 @@ impl IntelHex {
     /// use intelhex::{IntelHex, IntelHexError};
     /// use std::io;
     ///
-    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let res: Result<(), IntelHexError> = ih.update_byte(0x0, 0xFF);
     /// ```
     pub fn update_byte(&mut self, address: usize, value: u8) -> Result<(), IntelHexError> {
@@ -372,7 +446,7 @@ impl IntelHex {
     /// use intelhex::{IntelHex, IntelHexError};
     /// use std::io;
     ///
-    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let res: Result<(), IntelHexError> = ih.update_buffer_slice(&[(0x0, 0xFF), (0x1, 0xFF), (0x2, 0xFF)]);
     /// ```
     pub fn update_buffer_slice(
@@ -398,7 +472,7 @@ impl IntelHex {
     /// ```
     /// use intelhex::IntelHex;
     ///
-    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// ih.set_max_payload_size(0xFF);      // set to u8 max
     /// ih.write_hex("build/ex2/ih.hex");   // now data records can have up to 255 bytes of payload
     /// ```

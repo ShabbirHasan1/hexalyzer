@@ -23,21 +23,21 @@ impl fmt::Display for IntelHexError {
                 write!(
                     f,
                     "Error encountered during record parsing at line #{line} of the hex file:\n{}",
-                    base_err.to_string(),
+                    base_err,
                 )
             }
             IntelHexError::CreateRecordError(base_err) => {
                 write!(
                     f,
                     "Error encountered during creation of hex record:\n{}",
-                    base_err.to_string(),
+                    base_err,
                 )
             }
             IntelHexError::SetterError(base_err) => {
                 write!(
                     f,
                     "Error encountered during setting private field of IntelHex struct:\n{}",
-                    base_err.to_string(),
+                    base_err,
                 )
             }
         }

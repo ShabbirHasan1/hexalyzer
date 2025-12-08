@@ -12,7 +12,7 @@
 //! ```
 //! use intelhex::IntelHex;
 //!
-//! let mut ih = IntelHex::from_hex("tests/fixtures/ih_example_1.hex").unwrap();
+//! let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
 //! ih.write_hex("build/ex1/ih.hex");
 //! ```
 
