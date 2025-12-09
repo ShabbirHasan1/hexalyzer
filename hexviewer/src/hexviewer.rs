@@ -1,6 +1,7 @@
 use crate::byteedit::ByteEdit;
 use crate::selection::Selection;
 use crate::ui_jumpto::JumpTo;
+use crate::ui_popup::Popup;
 use crate::ui_search::Search;
 use intelhex::IntelHex;
 use std::ops::Range;
@@ -31,10 +32,10 @@ pub struct HexViewer {
     pub search: Search,
     /// Handler for GUI feature to jump to selected address
     pub jump_to: JumpTo,
-    /// Is help menu
-    pub help_menu_open: bool,
     /// Last frame time (for capping app's FPS)
     pub(crate) last_frame_time: Instant,
+    /// Pop up handler
+    pub(crate) popup: Popup,
 }
 
 impl Default for HexViewer {
@@ -49,8 +50,11 @@ impl Default for HexViewer {
             selection: Selection::default(),
             search: Search::default(),
             jump_to: JumpTo::default(),
-            help_menu_open: false,
             last_frame_time: Instant::now(),
+            popup: Popup {
+                active: false,
+                ptype: None,
+            },
         }
     }
 }

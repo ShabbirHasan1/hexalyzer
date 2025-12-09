@@ -1,4 +1,6 @@
 use crate::HexViewer;
+use crate::loader;
+use crate::ui_popup::PopupType;
 use eframe::egui;
 use intelhex::IntelHex;
 
@@ -10,20 +12,20 @@ impl HexViewer {
                 ui.menu_button("File", |ui| {
                     // OPEN BUTTON
                     if ui.button("Open").clicked()
-                        && let Some(path) = rfd::FileDialog::new()
-                            .set_title("Open Hex File")
-                            .pick_file()
+                        && let Some(path) =
+                            rfd::FileDialog::new().set_title("Open File").pick_file()
                     {
-                        let ih = IntelHex::from_hex(path);
+                        let mut ih = IntelHex::new();
+                        let res = loader::load_file(&path, &mut ih);
 
-                        if let Err(msg) = ih {
+                        if let Err(msg) = res {
                             self.error = Some(msg.to_string());
                         } else {
-                            self.ih = ih.unwrap();
+                            self.ih = ih;
                             self.editor.reset();
                             // Fill min/max address
-                            self.addr_range.start = self.ih.get_min_addr().unwrap();
-                            self.addr_range.end = self.ih.get_max_addr().unwrap();
+                            self.addr_range.start = self.ih.get_min_addr().unwrap_or(0);
+                            self.addr_range.end = self.ih.get_max_addr().unwrap_or(0);
                         }
                     }
 
@@ -44,22 +46,9 @@ impl HexViewer {
                 let about_button = ui.button("About");
 
                 if about_button.clicked() {
-                    self.help_menu_open = true;
+                    self.popup.active = true;
+                    self.popup.ptype = Some(PopupType::About);
                 }
-
-                let window = egui::Window::new("About")
-                    .open(&mut self.help_menu_open)
-                    .collapsible(false)
-                    .resizable(false)
-                    .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]);
-                    // .title_bar(false);
-
-                window.show(ctx, |ui| {
-                    ui.vertical(|ui| {
-                        ui.label("IntelHex");
-                        ui.label("...");
-                    });
-                });
             });
         });
     }

@@ -1,17 +1,19 @@
 mod byteedit;
 mod hexviewer;
+mod loader;
 mod selection;
-mod ui_error;
 mod ui_events;
 mod ui_fileinfo;
 mod ui_inspector;
 mod ui_jumpto;
+mod ui_popup;
 mod ui_scrollarea;
 mod ui_search;
 mod ui_topbar;
 mod ui_workspace;
 mod utils;
 
+use crate::ui_popup::PopupType;
 use eframe::egui;
 use eframe::egui::ViewportBuilder;
 use hexviewer::HexViewer;
@@ -57,9 +59,17 @@ impl eframe::App for HexViewer {
         self.last_frame_time = Instant::now();
 
         self.show_top_bar(ctx);
+
+        // TODO: relocate
         if self.error.is_some() {
-            self.show_error_popup(ctx);
+            self.popup.active = true;
+            self.popup.ptype = Some(PopupType::Error);
         }
+
+        if self.popup.active {
+            self.show_popup(ctx);
+        }
+
         self.show_central_workspace(ctx);
     }
 }
