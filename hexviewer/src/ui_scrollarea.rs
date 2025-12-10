@@ -5,7 +5,7 @@ impl HexViewer {
     /// Get scroll offset along Y axis
     pub(crate) fn get_scroll_offset(&self, ui: &egui::Ui, addr: usize) -> f32 {
         // Get y axis target coord
-        let row_idx = (addr - self.addr_range.start) / self.bytes_per_row;
+        let row_idx = (addr - self.addr.min) / self.bytes_per_row;
         let row_height =
             ui.text_style_height(&egui::TextStyle::Monospace) + ui.spacing().item_spacing.y;
         let target_y = row_idx as f32 * row_height;

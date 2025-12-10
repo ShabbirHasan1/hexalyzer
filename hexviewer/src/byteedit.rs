@@ -75,7 +75,7 @@ impl HexViewer {
                     // insert its address into Vec that tracks modified bytes.
                     for addr in s..=e {
                         let prev_value = self.ih.get_byte(addr);
-                        if let Some(_) = self.ih.update_byte(addr, value).ok()
+                        if let Some(()) = self.ih.update_byte(addr, value).ok()
                             && value != prev_value.unwrap()
                         {
                             self.editor.modified.push(addr);

@@ -6,6 +6,7 @@ use intelhex::IntelHex;
 
 impl HexViewer {
     pub(crate) fn show_top_bar(&mut self, ctx: &egui::Context) {
+        // try menu bar
         egui::TopBottomPanel::top("menubar").show(ctx, |ui| {
             ui.horizontal(|ui| {
                 // FILE MENU
@@ -23,9 +24,8 @@ impl HexViewer {
                         } else {
                             self.ih = ih;
                             self.editor.reset();
-                            // Fill min/max address
-                            self.addr_range.start = self.ih.get_min_addr().unwrap_or(0);
-                            self.addr_range.end = self.ih.get_max_addr().unwrap_or(0);
+                            // Fill min/max addresses
+                            self.addr.update_range(&self.ih);
                         }
                     }
 
@@ -34,11 +34,20 @@ impl HexViewer {
                         && let Some(path) = rfd::FileDialog::new().set_title("Save As").save_file()
                     {
                         match self.ih.write_hex(path) {
-                            Ok(_) => {}
+                            Ok(()) => {}
                             Err(msg) => {
                                 self.error = Some(msg.to_string());
                             }
                         }
+                    }
+                });
+
+                // EDIT BUTTON
+                ui.menu_button("Edit", |ui| {
+                    // OPEN BUTTON
+                    if ui.button("Re-address").clicked() {
+                        self.popup.active = true;
+                        self.popup.ptype = Some(PopupType::ReAddr);
                     }
                 });
 

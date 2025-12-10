@@ -4,49 +4,9 @@ use eframe::egui;
 use std::ops::Range;
 
 impl HexViewer {
-    pub(crate) fn show_central_workspace(&mut self, ctx: &egui::Context) {
-        // LEFT PANEL
-        egui::SidePanel::left("left_panel")
-            .exact_width(280.0)
-            .show(ctx, |ui| {
-                // FILE INFORMATION
-                egui::CollapsingHeader::new("File Information")
-                    .default_open(true)
-                    .show(ui, |ui| {
-                        ui.add_space(5.0);
-                        self.show_file_info_contents(ui);
-                        ui.add_space(5.0);
-                    });
-                // JUMP TO ADDRESS
-                egui::CollapsingHeader::new("Jump To Address")
-                    .default_open(true)
-                    .show(ui, |ui| {
-                        ui.add_space(5.0);
-                        self.show_jumpto_contents(ui);
-                        ui.add_space(5.0);
-                    });
-                // SEARCH
-                egui::CollapsingHeader::new("Search")
-                    .default_open(true)
-                    .show(ui, |ui| {
-                        ui.add_space(5.0);
-                        self.show_search_contents(ui);
-                        ui.add_space(5.0);
-                    });
-                // DATA INSPECTOR
-                egui::CollapsingHeader::new("Data Inspector")
-                    .default_open(true)
-                    .show(ui, |ui| {
-                        ui.add_space(5.0);
-                        self.show_data_inspector_contents(ui);
-                        ui.add_space(5.0);
-                    });
-            });
-
-        // CENTRAL VIEW
+    pub(crate) fn show_central_panel(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            let total_rows =
-                (self.addr_range.end - self.addr_range.start).div_ceil(self.bytes_per_row);
+            let total_rows = (self.addr.max - self.addr.min).div_ceil(self.bytes_per_row);
 
             // Get row height in pixels (depends on font size)
             let row_height = ui.text_style_height(&egui::TextStyle::Monospace);
@@ -106,7 +66,7 @@ impl HexViewer {
     ) {
         ui.horizontal(|ui| {
             // Start and end addresses
-            let start = self.addr_range.start + row * self.bytes_per_row;
+            let start = self.addr.min + row * self.bytes_per_row;
             let end = start + self.bytes_per_row;
 
             // Display address (fixed width, monospaced)
@@ -215,7 +175,7 @@ impl HexViewer {
 
     fn highlight_widget(
         &self,
-        ui: &mut egui::Ui,
+        ui: &egui::Ui,
         widget: &egui::Response,
         addr: usize,
         is_selected: bool,

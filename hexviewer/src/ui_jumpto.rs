@@ -26,7 +26,7 @@ impl HexViewer {
             && key == egui::Key::Enter
             && self.jump_to.has_focus
         {
-            self.jump_to.addr = usize::from_str_radix(&self.jump_to.input, 16).ok()
+            self.jump_to.addr = usize::from_str_radix(&self.jump_to.input, 16).ok();
         }
     }
 }

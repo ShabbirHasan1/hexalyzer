@@ -20,7 +20,7 @@ fn format_with_separators<T: ToString>(n: T) -> String {
         }
         result.insert(0, ch);
     }
-    format!("{}{}", sign, result)
+    format!("{sign}{result}")
 }
 
 /// Format the float so that it is nicely presented
@@ -29,9 +29,9 @@ fn format_float<T: Into<f64>>(float_value: T) -> String {
 
     // Decide between normal or scientific notation
     let formatted = if f.abs() >= 1e6 || (f != 0.0 && f.abs() < 1e-5) {
-        format!("{:.17e}", f) // scientific notation
+        format!("{f:.17e}") // scientific notation
     } else {
-        format!("{:.17}", f) // fixed decimal format
+        format!("{f:.17}") // fixed decimal format
     };
 
     // Trim trailing zeros and possible trailing decimal point

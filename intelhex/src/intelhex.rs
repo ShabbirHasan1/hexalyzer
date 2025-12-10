@@ -485,6 +485,27 @@ impl IntelHex {
         self.max_payload_size = size as usize;
         Ok(())
     }
+
+    // TODO
+    pub fn relocate(&mut self, new_start_address: usize) -> Result<(), IntelHexError> {
+        let min_addr = match self.get_min_addr() {
+            Some(val) => val,
+            None => {
+                return Err(IntelHexError::SetterError(
+                    IntelHexErrorKind::InvalidAddress(0),
+                ));
+            }
+        };
+
+        let offset = (new_start_address - min_addr) as isize;
+
+        self.buffer = std::mem::take(&mut self.buffer)
+            .into_iter()
+            .map(|(k, v)| ((k as isize + offset) as usize, v))
+            .collect();
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]

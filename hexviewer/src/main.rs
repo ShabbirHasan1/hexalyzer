@@ -1,7 +1,17 @@
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+// Optional stricter rules
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::panic)]
+
+mod address;
 mod byteedit;
 mod hexviewer;
 mod loader;
 mod selection;
+mod ui_centralpanel;
 mod ui_events;
 mod ui_fileinfo;
 mod ui_inspector;
@@ -9,8 +19,8 @@ mod ui_jumpto;
 mod ui_popup;
 mod ui_scrollarea;
 mod ui_search;
+mod ui_sidepanel;
 mod ui_topbar;
-mod ui_workspace;
 mod utils;
 
 use crate::ui_popup::PopupType;
@@ -48,7 +58,7 @@ impl eframe::App for HexViewer {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Cap the FPS to 30
         let target_dt = Duration::from_secs_f64(1.0 / 60.0);
-        let elapsed = Instant::now() - self.last_frame_time;
+        let elapsed = self.last_frame_time.elapsed();
 
         // debug fps
         println!("fps={:.1}", 1.0 / elapsed.as_secs_f64());
@@ -60,17 +70,19 @@ impl eframe::App for HexViewer {
 
         self.show_top_bar(ctx);
 
-        // TODO: relocate
+        // TODO: move this somewhere
         if self.error.is_some() {
             self.popup.active = true;
             self.popup.ptype = Some(PopupType::Error);
         }
 
+        self.show_side_panel(ctx);
+
         if self.popup.active {
             self.show_popup(ctx);
+        } else {
+            self.show_central_panel(ctx);
         }
-
-        self.show_central_workspace(ctx);
     }
 }
 

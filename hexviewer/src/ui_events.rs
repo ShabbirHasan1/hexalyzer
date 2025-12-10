@@ -4,7 +4,7 @@ pub(crate) struct EventManager {}
 
 impl EventManager {
     /// Helper for mapping keys to hex chars
-    fn key_to_hex_char(key: egui::Key) -> Option<char> {
+    const fn key_to_hex_char(key: egui::Key) -> Option<char> {
         use egui::Key::*;
         Some(match key {
             Num0 => '0',

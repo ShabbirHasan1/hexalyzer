@@ -9,7 +9,7 @@ pub(crate) struct Selection {
 
 impl Selection {
     /// Check if provided addr is within the selection range
-    pub(crate) fn is_addr_within_range(&self, addr: usize) -> bool {
+    pub(crate) const fn is_addr_within_range(&self, addr: usize) -> bool {
         if let Some(range) = self.range {
             if range[0] < range[1] {
                 return range[0] <= addr && range[1] >= addr;

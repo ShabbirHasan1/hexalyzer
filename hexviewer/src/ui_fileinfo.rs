@@ -3,7 +3,7 @@ use eframe::egui;
 use eframe::egui::Ui;
 
 impl HexViewer {
-    pub(crate) fn show_file_info_contents(&mut self, ui: &mut Ui) {
+    pub(crate) fn show_file_info_contents(&self, ui: &mut Ui) {
         // Get filename
         let filename = self
             .ih
