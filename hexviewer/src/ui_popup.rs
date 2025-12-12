@@ -58,7 +58,16 @@ impl HexViewer {
     }
 
     fn display_readdr(&mut self, ui: &mut egui::Ui) -> bool {
-        ui.text_edit_singleline(&mut self.addr.new_str);
+        ui.horizontal(|ui| {
+            ui.label("New start address:");
+            ui.add_space(1.5);
+            ui.add(
+                egui::TextEdit::singleline(&mut self.addr.new_str)
+                    .desired_width(ui.available_width() - 70.0)
+            );
+        });
+
+        ui.add_space(10.0);
 
         if ui.button("OK").clicked() {
             self.addr.set_new_start_addr();
@@ -103,22 +112,22 @@ impl HexViewer {
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]);
 
-        let mut close = false;
+        let mut close_confirm = false;
         window.show(ctx, |ui| match popup_type {
-            PopupType::Error => close = self.display_error(ui),
-            PopupType::About => close = self.display_about(ui),
-            PopupType::ReAddr => close = self.display_readdr(ui),
+            PopupType::Error => close_confirm = self.display_error(ui),
+            PopupType::About => close_confirm = self.display_about(ui),
+            PopupType::ReAddr => close_confirm = self.display_readdr(ui),
         });
 
         // nasty logic...
-        is_open = !close && is_open;
+        is_open = !close_confirm && is_open;
         self.popup.active = is_open;
 
         // If the window got closed this frame
         if was_open && !self.popup.active {
             self.error = None;
 
-            if self.popup.ptype == Some(PopupType::ReAddr) {
+            if self.popup.ptype == Some(PopupType::ReAddr) && close_confirm {
                 // Re-address the IntelHex
                 match self.ih.relocate(self.addr.min) {
                     Ok(()) => {}

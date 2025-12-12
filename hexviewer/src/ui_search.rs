@@ -16,14 +16,17 @@ pub(crate) struct Search {
 impl HexViewer {
     /// Show contents of search menu
     pub(crate) fn show_search_contents(&mut self, ui: &mut egui::Ui) {
-        let textedit = ui.text_edit_singleline(&mut self.search.input);
+        let textedit = ui.add(
+            egui::TextEdit::singleline(&mut self.search.input)
+                .desired_width(ui.available_width() - 30.0)
+        );
 
         if textedit.has_focus() {
             self.jump_to.has_focus = false;
             self.search.has_focus = true;
         }
 
-        if let Some(key) = EventManager::get_keyboard_input_key(ui)
+        if let Some(key) = EventManager::get_keyboard_input_key(ui) // get one event per cycle
             && key == egui::Key::Enter
             && self.search.has_focus
         {

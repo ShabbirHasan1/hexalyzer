@@ -497,7 +497,7 @@ impl IntelHex {
             }
         };
 
-        let offset = (new_start_address - min_addr) as isize;
+        let offset = new_start_address as isize - min_addr as isize;
 
         self.buffer = std::mem::take(&mut self.buffer)
             .into_iter()

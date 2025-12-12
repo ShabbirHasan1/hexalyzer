@@ -15,7 +15,10 @@ pub(crate) struct JumpTo {
 impl HexViewer {
     /// Show contents of jumpto menu
     pub(crate) fn show_jumpto_contents(&mut self, ui: &mut egui::Ui) {
-        let textedit = ui.text_edit_singleline(&mut self.jump_to.input);
+        let textedit = ui.add(
+            egui::TextEdit::singleline(&mut self.jump_to.input)
+                .desired_width(ui.available_width() - 30.0)
+        );
 
         if textedit.has_focus() {
             self.search.has_focus = false;

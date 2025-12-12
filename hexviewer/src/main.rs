@@ -87,6 +87,8 @@ impl eframe::App for HexViewer {
 }
 
 // TODO for MVP:
+// Drag and drop?
+//
 // Verify export works OK
 // Add content to help
 // Verify performance acceptable (cap if needed)
