@@ -20,12 +20,6 @@ impl ByteEdit {
         self.buffer.clear();
     }
 
-    /// Reset the state of the editor when hex is closed / new hex loaded
-    pub(crate) fn reset(&mut self) {
-        self.clear();
-        self.modified.clear();
-    }
-
     /// Is provided address same as being edited
     pub(crate) fn is_addr_same(&self, addr: Option<[usize; 2]>) -> bool {
         addr == self.addr

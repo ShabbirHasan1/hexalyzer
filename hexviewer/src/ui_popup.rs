@@ -22,6 +22,7 @@ impl PopupType {
 
 //  ========================== Popup logic =================================== //
 
+#[derive(Default)]
 pub struct Popup {
     pub(crate) active: bool,
     pub(crate) ptype: Option<PopupType>,

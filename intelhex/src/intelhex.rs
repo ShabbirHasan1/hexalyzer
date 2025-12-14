@@ -385,7 +385,7 @@ impl IntelHex {
     /// let min_addr: Option<usize> = ih.get_min_addr();
     /// ```
     pub fn get_min_addr(&self) -> Option<usize> {
-        self.buffer.keys().min().copied()
+        self.buffer.first_key_value().map(|(key, _)| *key)
     }
 
     /// Get the highest address present in the data buffer.
@@ -398,7 +398,7 @@ impl IntelHex {
     /// let max_addr: Option<usize> = ih.get_max_addr();
     /// ```
     pub fn get_max_addr(&self) -> Option<usize> {
-        self.buffer.keys().max().copied()
+        self.buffer.last_key_value().map(|(key, _)| *key)
     }
 
     /// Get byte from IntelHex at the provided address.

@@ -7,8 +7,8 @@
 // #![warn(clippy::panic)]
 
 mod address;
-mod byteedit;
 mod app;
+mod byteedit;
 mod loader;
 mod selection;
 mod ui_centralpanel;
@@ -24,10 +24,9 @@ mod ui_topbar;
 mod utils;
 
 use crate::ui_popup::PopupType;
+use app::HexViewerApp;
 use eframe::egui;
 use eframe::egui::ViewportBuilder;
-use app::HexViewerApp;
-
 
 pub(crate) mod colors {
     use eframe::egui::Color32;
@@ -40,7 +39,6 @@ pub(crate) mod colors {
     pub const GRAY_210: Color32 = Color32::from_gray(210);
     pub const SHADOW: Color32 = Color32::from_black_alpha(150);
 }
-
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
@@ -59,9 +57,6 @@ fn main() -> eframe::Result<()> {
 
 impl eframe::App for HexViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Soft cap the frame rate to 30 fps
-        ctx.request_repaint_after(std::time::Duration::from_secs_f32(1.0 / 30.0));
-
         self.show_top_bar(ctx);
 
         // TODO: move this somewhere
@@ -81,8 +76,7 @@ impl eframe::App for HexViewerApp {
 }
 
 // TODO for MVP:
-// Drag and drop?
-//
+// Drag and drop files?
 // Verify export works OK
 // Add content to help
 // Verify performance acceptable (cap if needed)
@@ -91,4 +85,5 @@ impl eframe::App for HexViewerApp {
 
 // TODO further:
 // Use LayoutJob or other methods to do custom bytes display instead of widget (BIG TASK)
-//
+// Prefetch the visible window into a Vec and render from that cache.
+// Instead of rendering gaps fully, use egui Separator or other thing to show the address gap

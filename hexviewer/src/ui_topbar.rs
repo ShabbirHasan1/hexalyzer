@@ -24,8 +24,12 @@ impl HexViewerApp {
                             if let Err(msg) = res {
                                 self.error = Some(msg.to_string());
                             } else {
+                                // Clear the state of the app
+                                self.clear();
+
+                                // Load the IntelHex
                                 self.ih = ih;
-                                self.editor.reset();
+
                                 // Fill min/max addresses
                                 self.addr.update_range(&self.ih);
                             }
@@ -52,6 +56,19 @@ impl HexViewerApp {
                             self.popup.active = true;
                             self.popup.ptype = Some(PopupType::ReAddr);
                         }
+                    });
+
+                    // VIEW BUTTON
+                    ui.menu_button("View", |ui| {
+
+                        ui.label("Select Bytes per Row:");
+
+                        ui.add_space(3.0);
+
+                        // RadioButtons to select between 16 and 32 bytes per row
+                        ui.radio_value(&mut self.bytes_per_row, 16, "16 bytes");
+                        ui.add_space(1.0);
+                        ui.radio_value(&mut self.bytes_per_row, 32, "32 bytes");
                     });
 
                     // ABOUT BUTTON

@@ -47,10 +47,20 @@ impl Default for HexViewerApp {
             selection: Selection::default(),
             search: Search::default(),
             jump_to: JumpTo::default(),
-            popup: Popup {
-                active: false,
-                ptype: None,
-            },
+            popup: Popup::default(),
         }
+    }
+}
+
+impl HexViewerApp {
+    pub(crate) fn clear(&mut self) {
+        self.ih = IntelHex::default();
+        self.addr = Address::default();
+        self.error = None;
+        self.editor = ByteEdit::default();
+        self.selection = Selection::default();
+        self.search = Search::default();
+        self.jump_to = JumpTo::default();
+        self.popup = Popup::default();
     }
 }

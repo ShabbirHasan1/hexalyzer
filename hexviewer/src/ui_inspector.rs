@@ -57,13 +57,14 @@ impl HexViewerApp {
         ui.radio_value(&mut self.endianness, Endianness::Big, "Big Endian");
 
         ui.add_space(5.0);
+        ui.separator();
 
         egui::Grid::new("data_inspector_grid")
             .num_columns(2) // two columns: label & value
             .spacing([20.0, 4.0]) // horizontal & vertical spacing
             .show(ui, |ui| {
-                ui.heading("Type");
-                ui.heading("Value");
+                ui.label("Type");
+                ui.label("Value");
                 ui.end_row();
 
                 if self.selection.range.is_none() {
@@ -98,6 +99,9 @@ impl HexViewerApp {
                         ui.label("i8");
                         ui.label(val_i8.to_string());
                         ui.end_row();
+                        let val_bin = format!("{:08b}", val_u8);
+                        ui.label("bin");
+                        ui.label(val_bin);
                     }
                     2 => {
                         let val_u16 = u16::from_le_bytes(bytes.as_slice().try_into().unwrap());
@@ -108,6 +112,9 @@ impl HexViewerApp {
                         ui.label("i16");
                         ui.label(format_with_separators(val_i16));
                         ui.end_row();
+                        let val_bin = format!("{:016b}", val_u16);
+                        ui.label("bin");
+                        ui.label(val_bin);
                     }
                     4 => {
                         let val_u32 = u32::from_le_bytes(bytes.as_slice().try_into().unwrap());
@@ -122,6 +129,10 @@ impl HexViewerApp {
                         ui.label("f32");
                         ui.label(format_float(val_f32));
                         ui.end_row();
+                        let val_bin = format!("{:032b}", val_u32);
+                        let multiline = format!("{}\n{}", &val_bin[0..24], &val_bin[24..32]);
+                        ui.label("bin");
+                        ui.label(multiline);
                     }
                     8 => {
                         let val_u64 = u64::from_le_bytes(bytes.as_slice().try_into().unwrap());
@@ -136,6 +147,10 @@ impl HexViewerApp {
                         ui.label("f64");
                         ui.label(format_float(val_f64));
                         ui.end_row();
+                        let val_bin = format!("{:064b}", val_u64);
+                        let multiline = format!("{}\n{}\n{}", &val_bin[0..24], &val_bin[24..48], &val_bin[48..64]);
+                        ui.label("bin");
+                        ui.label(multiline);
                     }
                     _ => {
                         ui.label("--");
