@@ -27,7 +27,6 @@ use crate::ui_popup::PopupType;
 use eframe::egui;
 use eframe::egui::ViewportBuilder;
 use hexviewer::HexViewer;
-use std::time::{Duration, Instant};
 
 pub(crate) mod color {
     use eframe::egui::Color32;
@@ -43,6 +42,7 @@ pub(crate) mod color {
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
+        vsync: false,
         viewport: ViewportBuilder::default()
             .with_resizable(true)
             .with_inner_size([1280.0, 720.0]),
@@ -57,17 +57,8 @@ fn main() -> eframe::Result<()> {
 
 impl eframe::App for HexViewer {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // Cap the FPS to 30
-        let target_dt = Duration::from_secs_f64(1.0 / 60.0);
-        let elapsed = self.last_frame_time.elapsed();
-
-        // debug fps
-        // println!("fps={:.1}", 1.0 / elapsed.as_secs_f64());
-
-        if elapsed < target_dt {
-            std::thread::sleep(target_dt - elapsed);
-        }
-        self.last_frame_time = Instant::now();
+        // Soft cap the frame rate to 30 fps
+        ctx.request_repaint_after(std::time::Duration::from_secs_f32(1.0 / 30.0));
 
         self.show_top_bar(ctx);
 

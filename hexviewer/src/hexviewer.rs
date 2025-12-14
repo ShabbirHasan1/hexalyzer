@@ -5,7 +5,6 @@ use crate::ui_jumpto::JumpTo;
 use crate::ui_popup::Popup;
 use crate::ui_search::Search;
 use intelhex::IntelHex;
-use std::time::Instant;
 
 #[derive(PartialEq, Eq)]
 pub enum Endianness {
@@ -32,8 +31,6 @@ pub struct HexViewer {
     pub search: Search,
     /// Handler for GUI feature to jump to selected address
     pub jump_to: JumpTo,
-    /// Last frame time (for capping app's FPS)
-    pub last_frame_time: Instant,
     /// Pop up handler
     pub popup: Popup,
 }
@@ -43,14 +40,13 @@ impl Default for HexViewer {
         Self {
             ih: IntelHex::default(),
             addr: Address::default(),
-            bytes_per_row: 32,
+            bytes_per_row: 16,
             endianness: Endianness::Little,
             error: None,
             editor: ByteEdit::default(),
             selection: Selection::default(),
             search: Search::default(),
             jump_to: JumpTo::default(),
-            last_frame_time: Instant::now(),
             popup: Popup {
                 active: false,
                 ptype: None,
