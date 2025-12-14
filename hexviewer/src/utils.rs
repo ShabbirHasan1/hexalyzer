@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::btree_map;
 
 /// Parse `str` hex representation into `Vec<u8>`
 pub(crate) fn parse_hex_str_into_vec(input: &str) -> Option<Vec<u8>> {
@@ -17,10 +17,20 @@ pub(crate) fn parse_hex_str_into_vec(input: &str) -> Option<Vec<u8>> {
 /// Boyer–Moore–Horspool algorithm for BTreeMap<usize, u8>.
 /// Returns the starting addresses of all matches.
 ///
-/// TODO: add SIMD acceleration
-pub(crate) fn search_bmh(map: &BTreeMap<usize, u8>, pattern: &[u8]) -> Vec<usize> {
+/// TODO: 1) add SIMD acceleration; 2) Replace with KMP search?
+pub(crate) fn search_bmh(map_iter: btree_map::Iter<usize, u8>, pattern: &[u8]) -> Vec<usize> {
     let m = pattern.len();
-    if m == 0 || map.is_empty() {
+    if m == 0 || m > u8::MAX as usize {
+        return vec![];
+    }
+
+    // Consume the iterator once into an indexable representation.
+    // This does not clone the BTreeMap, only copies (usize, u8) pairs.
+    let haystack: Vec<(usize, u8)> = map_iter.map(|(&addr, &byte)| (addr, byte)).collect();
+
+    // Check if length of address is less than the pattern
+    let n = haystack.len();
+    if n < m {
         return vec![];
     }
 
@@ -33,35 +43,22 @@ pub(crate) fn search_bmh(map: &BTreeMap<usize, u8>, pattern: &[u8]) -> Vec<usize
     // Prepare result collection
     let mut results = Vec::new();
 
-    // Build a Vec of (addr,byte) indices into map for sequential access.
-    // NOTE: only address are stored in this Vec, not the bytes.
-    let addrs: Vec<usize> = map.keys().copied().collect();
-
-    // Check if length of address is less than the pattern
-    let n = addrs.len();
-    if n < m {
-        return results;
-    }
-
-    let bytes_iter = |i: usize| -> u8 { map[&addrs[i]] };
-
     // Main BMH loop
     let mut i = 0; // index into addrs[]
-
     while i <= n - m {
         // Compare pattern from right to left
         let mut j = (m - 1) as isize;
-        while j >= 0 && bytes_iter(i + j as usize) == pattern[j as usize] {
+        while j >= 0 && haystack[i + j as usize].1 == pattern[j as usize] {
             j -= 1;
         }
 
         if j < 0 {
             // Match found
-            results.push(addrs[i]);
+            results.push(haystack[i].0);
             i += 1; // advance minimally
         } else {
             // Mismatch -> skip using last byte of window
-            let last_byte = bytes_iter(i + m - 1);
+            let last_byte = haystack[i + m - 1].1;
             i += bad_match[last_byte as usize] as usize;
         }
     }

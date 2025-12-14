@@ -358,6 +358,23 @@ impl IntelHex {
         self.buffer.clone()
     }
 
+    /// Get an iterator over (address, byte) pairs in the BTreeMap buffer of the `IntelHex`.
+    ///
+    /// # Example
+    /// ```
+    /// use std::collections::{BTreeMap, btree_map};
+    /// use intelhex::IntelHex;
+    ///
+    /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
+    ///
+    /// let mut map_iter: btree_map::Iter<'_, usize, u8> = ih.iter();
+    /// let (first_key, first_value) = map_iter.next().unwrap();
+    /// assert_eq!((*first_key, *first_value), (0, 250));
+    /// ```
+    pub fn iter(&self) -> std::collections::btree_map::Iter<'_, usize, u8> {
+        self.buffer.iter()
+    }
+
     /// Get the smallest address present in the data buffer.
     ///
     /// # Example

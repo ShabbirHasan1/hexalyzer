@@ -61,7 +61,7 @@ impl HexViewerApp {
 
                 if let Some(p) = pattern {
                     // If pattern valid -> search
-                    self.search.results = search_bmh(&self.ih.to_btree_map(), &p);
+                    self.search.results = search_bmh(self.ih.iter(), &p);
                     self.search.length = p.len();
                 } else {
                     // If pattern not valid -> clear results
