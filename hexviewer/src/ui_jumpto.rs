@@ -1,4 +1,4 @@
-use crate::hexviewer::HexViewer;
+use crate::app::HexViewerApp;
 use crate::ui_events::EventManager;
 use eframe::egui;
 
@@ -12,7 +12,7 @@ pub(crate) struct JumpTo {
     input: String,
 }
 
-impl HexViewer {
+impl HexViewerApp {
     /// Show contents of jumpto menu
     pub(crate) fn show_jumpto_contents(&mut self, ui: &mut egui::Ui) {
         let textedit = ui.add(

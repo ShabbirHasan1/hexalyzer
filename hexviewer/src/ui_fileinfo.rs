@@ -1,8 +1,8 @@
-use crate::hexviewer::HexViewer;
+use crate::app::HexViewerApp;
 use eframe::egui;
 use eframe::egui::Ui;
 
-impl HexViewer {
+impl HexViewerApp {
     pub(crate) fn show_file_info_contents(&self, ui: &mut Ui) {
         // Get filename
         let filename = self

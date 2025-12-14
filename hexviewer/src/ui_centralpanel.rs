@@ -1,9 +1,9 @@
 use crate::ui_events::EventManager;
-use crate::{HexViewer, color};
+use crate::{HexViewerApp, colors};
 use eframe::egui;
 use std::ops::Range;
 
-impl HexViewer {
+impl HexViewerApp {
     pub(crate) fn show_central_panel(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
             let total_rows = (self.addr.max - self.addr.min).div_ceil(self.bytes_per_row);
@@ -31,7 +31,7 @@ impl HexViewer {
         self.jump_to.addr = None;
     }
 
-    pub(crate) fn draw_main_canvas(&mut self, ui: &mut egui::Ui, row_range: Range<usize>) {
+    fn draw_main_canvas(&mut self, ui: &mut egui::Ui, row_range: Range<usize>) {
         // Get state of the mouse click
         let pointer_down = EventManager::is_pointer_down(ui);
         let pointer_hover = EventManager::get_pointer_hover(ui);
@@ -88,9 +88,9 @@ impl HexViewer {
 
                 // Change color of every other byte for better readability
                 let bg_color = if addr % 2 == 0 {
-                    color::GRAY_210
+                    colors::GRAY_210
                 } else {
-                    color::GRAY_160
+                    colors::GRAY_160
                 };
 
                 // Determine display value of the byte
@@ -113,7 +113,7 @@ impl HexViewer {
                             .size(12.0)
                             .color(bg_color),
                     )
-                    .fill(color::TRANSPARENT),
+                    .fill(colors::TRANSPARENT),
                 );
 
                 // Update the selection range
@@ -156,7 +156,7 @@ impl HexViewer {
                 // Show char as label
                 let label = ui.add(egui::Label::new(
                     egui::RichText::new(ch.to_string())
-                        .color(color::GRAY_160)
+                        .color(colors::GRAY_160)
                         .monospace(),
                 ));
 
@@ -188,7 +188,7 @@ impl HexViewer {
         if is_selected {
             // If selected -> highlight (1st prio)
             ui.painter()
-                .rect_filled(widget.rect, 0.0, color::LIGHT_BLUE);
+                .rect_filled(widget.rect, 0.0, colors::LIGHT_BLUE);
             return;
         }
 
@@ -200,14 +200,14 @@ impl HexViewer {
             });
 
             if is_inside_match {
-                ui.painter().rect_filled(widget.rect, 0.0, color::GREEN);
+                ui.painter().rect_filled(widget.rect, 0.0, colors::GREEN);
                 return;
             }
         }
 
         if self.editor.modified.contains(&addr) {
             // If modified -> highlight (3rd prio)
-            ui.painter().rect_filled(widget.rect, 0.0, color::MUD);
+            ui.painter().rect_filled(widget.rect, 0.0, colors::MUD);
         }
     }
 }

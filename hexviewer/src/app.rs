@@ -12,7 +12,7 @@ pub enum Endianness {
     Big,
 }
 
-pub struct HexViewer {
+pub struct HexViewerApp {
     /// `IntelHex` object returned by intelhex library
     pub ih: IntelHex,
     /// Address handling of the hex data
@@ -35,7 +35,7 @@ pub struct HexViewer {
     pub popup: Popup,
 }
 
-impl Default for HexViewer {
+impl Default for HexViewerApp {
     fn default() -> Self {
         Self {
             ih: IntelHex::default(),

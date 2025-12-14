@@ -1,4 +1,4 @@
-use crate::hexviewer::HexViewer;
+use crate::app::HexViewerApp;
 
 #[derive(Default)]
 pub(crate) struct ByteEdit {
@@ -32,7 +32,7 @@ impl ByteEdit {
     }
 }
 
-impl HexViewer {
+impl HexViewerApp {
     /// Update edit buffer used for temporary storage of user key inputs
     /// during byte editing process
     pub(crate) fn update_edit_buffer(&mut self, typed_char: Option<char>) {

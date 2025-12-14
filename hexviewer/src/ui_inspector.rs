@@ -1,4 +1,4 @@
-use crate::hexviewer::{Endianness, HexViewer};
+use crate::app::{Endianness, HexViewerApp};
 use eframe::egui;
 use eframe::egui::Ui;
 
@@ -51,7 +51,7 @@ fn format_float<T: Into<f64>>(float_value: T) -> String {
     format!("{}.{}", format_with_separators(int_part), frac_part)
 }
 
-impl HexViewer {
+impl HexViewerApp {
     pub(crate) fn show_data_inspector_contents(&mut self, ui: &mut Ui) {
         ui.radio_value(&mut self.endianness, Endianness::Little, "Little Endian");
         ui.radio_value(&mut self.endianness, Endianness::Big, "Big Endian");

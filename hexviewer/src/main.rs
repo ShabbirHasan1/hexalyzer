@@ -8,7 +8,7 @@
 
 mod address;
 mod byteedit;
-mod hexviewer;
+mod app;
 mod loader;
 mod selection;
 mod ui_centralpanel;
@@ -26,9 +26,10 @@ mod utils;
 use crate::ui_popup::PopupType;
 use eframe::egui;
 use eframe::egui::ViewportBuilder;
-use hexviewer::HexViewer;
+use app::HexViewerApp;
 
-pub(crate) mod color {
+
+pub(crate) mod colors {
     use eframe::egui::Color32;
 
     pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
@@ -39,6 +40,7 @@ pub(crate) mod color {
     pub const GRAY_210: Color32 = Color32::from_gray(210);
     pub const SHADOW: Color32 = Color32::from_black_alpha(150);
 }
+
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
@@ -51,11 +53,11 @@ fn main() -> eframe::Result<()> {
     eframe::run_native(
         "Hexalyzer",
         options,
-        Box::new(|_cc| Ok(Box::new(HexViewer::default()))),
+        Box::new(|_cc| Ok(Box::new(HexViewerApp::default()))),
     )
 }
 
-impl eframe::App for HexViewer {
+impl eframe::App for HexViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // Soft cap the frame rate to 30 fps
         ctx.request_repaint_after(std::time::Duration::from_secs_f32(1.0 / 30.0));
@@ -86,3 +88,7 @@ impl eframe::App for HexViewer {
 // Verify performance acceptable (cap if needed)
 // Polish up code
 // Add documentation
+
+// TODO further:
+// Use LayoutJob or other methods to do custom bytes display instead of widget (BIG TASK)
+//

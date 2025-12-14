@@ -1,4 +1,4 @@
-use crate::{HexViewer, color};
+use crate::{HexViewerApp, colors};
 use eframe::egui;
 
 //  ========================== Popup Type logic ============================= //
@@ -36,7 +36,7 @@ impl Popup {
 
 //  ========================== HexViewer logic ============================= //
 
-impl HexViewer {
+impl HexViewerApp {
     fn display_error(&self, ui: &mut egui::Ui) -> bool {
         ui.label(self.error.as_ref().unwrap());
 
@@ -97,7 +97,7 @@ impl HexViewer {
             egui::Order::Background,
             egui::Id::new("modal_bg"),
         ));
-        painter.rect_filled(content_rect, 0.0, color::SHADOW);
+        painter.rect_filled(content_rect, 0.0, colors::SHADOW);
 
         let mut is_open = self.popup.active;
         let was_open = self.popup.active;

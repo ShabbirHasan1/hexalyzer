@@ -1,4 +1,4 @@
-use crate::hexviewer::HexViewer;
+use crate::app::HexViewerApp;
 use crate::ui_events::EventManager;
 use crate::utils::{parse_hex_str_into_vec, search_bmh};
 use eframe::egui;
@@ -39,7 +39,7 @@ impl Search {
     }
 }
 
-impl HexViewer {
+impl HexViewerApp {
     /// Show contents of search menu
     pub(crate) fn show_search_contents(&mut self, ui: &mut egui::Ui) {
         let textedit = ui.add(

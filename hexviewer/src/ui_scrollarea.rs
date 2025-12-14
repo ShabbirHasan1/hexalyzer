@@ -1,7 +1,7 @@
-use crate::hexviewer::HexViewer;
+use crate::app::HexViewerApp;
 use eframe::egui;
 
-impl HexViewer {
+impl HexViewerApp {
     /// Get scroll offset along Y axis
     pub(crate) fn get_scroll_offset(&self, ui: &egui::Ui, addr: usize) -> f32 {
         // Get y axis target coord

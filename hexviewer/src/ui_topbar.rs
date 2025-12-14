@@ -1,10 +1,10 @@
-use crate::HexViewer;
+use crate::HexViewerApp;
 use crate::loader;
 use crate::ui_popup::PopupType;
 use eframe::egui;
 use intelhex::IntelHex;
 
-impl HexViewer {
+impl HexViewerApp {
     pub(crate) fn show_top_bar(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("menubar").show(ctx, |ui| {
             ui.add_space(3.0);

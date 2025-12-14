@@ -1,7 +1,7 @@
-use crate::hexviewer::HexViewer;
+use crate::app::HexViewerApp;
 use eframe::egui;
 
-impl HexViewer {
+impl HexViewerApp {
     pub(crate) fn show_side_panel(&mut self, ctx: &egui::Context) {
         egui::SidePanel::left("left_panel")
             .exact_width(280.0)
