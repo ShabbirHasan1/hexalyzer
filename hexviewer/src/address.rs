@@ -20,9 +20,8 @@ impl Address {
     }
 
     pub(crate) fn set_new_start_addr(&mut self) {
-        match usize::from_str_radix(&self.new_str, 16) {
-            Ok(addr) => self.min = addr,
-            Err(_) => {}
+        if let Ok(addr) = usize::from_str_radix(&self.new_str, 16) {
+            self.min = addr;
         }
     }
 }

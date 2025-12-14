@@ -1,10 +1,10 @@
-#![warn(clippy::all)]
-#![warn(clippy::pedantic)]
-#![warn(clippy::nursery)]
-// Optional stricter rules
-#![warn(clippy::unwrap_used)]
-#![warn(clippy::expect_used)]
-#![warn(clippy::panic)]
+// #![warn(clippy::all)]
+// #![warn(clippy::pedantic)]
+// #![warn(clippy::nursery)]
+// // Optional stricter rules
+// #![warn(clippy::unwrap_used)]
+// #![warn(clippy::expect_used)]
+// #![warn(clippy::panic)]
 
 mod address;
 mod byteedit;
@@ -35,6 +35,7 @@ pub(crate) mod color {
     pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
     pub const LIGHT_BLUE: Color32 = Color32::from_rgba_premultiplied(33, 81, 109, 20);
     pub const MUD: Color32 = Color32::from_rgba_premultiplied(54, 44, 19, 20);
+    pub const GREEN: Color32 = Color32::from_rgba_premultiplied(35, 53, 38, 20);
     pub const GRAY_160: Color32 = Color32::from_gray(160);
     pub const GRAY_210: Color32 = Color32::from_gray(210);
     pub const SHADOW: Color32 = Color32::from_black_alpha(150);
@@ -61,7 +62,7 @@ impl eframe::App for HexViewer {
         let elapsed = self.last_frame_time.elapsed();
 
         // debug fps
-        println!("fps={:.1}", 1.0 / elapsed.as_secs_f64());
+        // println!("fps={:.1}", 1.0 / elapsed.as_secs_f64());
 
         if elapsed < target_dt {
             std::thread::sleep(target_dt - elapsed);

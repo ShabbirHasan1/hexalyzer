@@ -25,6 +25,10 @@ impl HexViewer {
                     self.draw_main_canvas(ui, row_range);
                 })
         });
+
+        // Reset the state of search and jump after drawing the central panel
+        self.search.addr = None;
+        self.jump_to.addr = None;
     }
 
     pub(crate) fn draw_main_canvas(&mut self, ui: &mut egui::Ui, row_range: Range<usize>) {
@@ -48,6 +52,7 @@ impl HexViewer {
             if !self.editor.in_progress {
                 self.selection.clear();
             }
+            self.search.clear();
             self.editor.clear()
         }
 
@@ -181,9 +186,27 @@ impl HexViewer {
         is_selected: bool,
     ) {
         if is_selected {
+            // If selected -> highlight (1st prio)
             ui.painter()
                 .rect_filled(widget.rect, 0.0, color::LIGHT_BLUE);
-        } else if self.editor.modified.contains(&addr) {
+            return;
+        }
+
+        if !self.search.results.is_empty() {
+            // If search active -> highlight if inside search results (2nd prio)
+            let is_inside_match = self.search.results.iter().any(|&start| {
+                let end = start.saturating_add(self.search.length);
+                (start..end).contains(&addr)
+            });
+
+            if is_inside_match {
+                ui.painter().rect_filled(widget.rect, 0.0, color::GREEN);
+                return;
+            }
+        }
+
+        if self.editor.modified.contains(&addr) {
+            // If modified -> highlight (3rd prio)
             ui.painter().rect_filled(widget.rect, 0.0, color::MUD);
         }
     }

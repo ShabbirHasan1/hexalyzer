@@ -7,7 +7,6 @@ use intelhex::IntelHex;
 impl HexViewer {
     pub(crate) fn show_top_bar(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("menubar").show(ctx, |ui| {
-
             ui.add_space(3.0);
 
             egui::MenuBar::new().ui(ui, |ui| {
@@ -17,7 +16,7 @@ impl HexViewer {
                         // OPEN BUTTON
                         if ui.button("Open").clicked()
                             && let Some(path) =
-                            rfd::FileDialog::new().set_title("Open File").pick_file()
+                                rfd::FileDialog::new().set_title("Open File").pick_file()
                         {
                             let mut ih = IntelHex::new();
                             let res = loader::load_file(&path, &mut ih);
@@ -34,7 +33,8 @@ impl HexViewer {
 
                         // EXPORT BUTTON
                         if ui.button("Export").clicked()
-                            && let Some(path) = rfd::FileDialog::new().set_title("Save As").save_file()
+                            && let Some(path) =
+                                rfd::FileDialog::new().set_title("Save As").save_file()
                         {
                             match self.ih.write_hex(path) {
                                 Ok(()) => {}
@@ -65,7 +65,6 @@ impl HexViewer {
             });
 
             ui.add_space(2.0);
-
         });
     }
 }

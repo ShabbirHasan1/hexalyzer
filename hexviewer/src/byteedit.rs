@@ -71,6 +71,7 @@ impl HexViewer {
                     } else {
                         (end, start)
                     };
+
                     // Update the bytes in the map. If the byte is actually changed -
                     // insert its address into Vec that tracks modified bytes.
                     for addr in s..=e {
@@ -80,6 +81,11 @@ impl HexViewer {
                         {
                             self.editor.modified.push(addr);
                         }
+                    }
+
+                    // If there are search results - redo it
+                    if !self.search.results.is_empty() {
+                        self.search.redo();
                     }
                 }
                 self.editor.clear();

@@ -10,7 +10,7 @@ impl HexViewer {
             .filepath
             .file_name()
             .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| "-".to_string());
+            .unwrap_or_else(|| "--".to_string());
 
         egui::Grid::new("file_info_grid")
             .num_columns(2) // two columns: label + value

@@ -63,7 +63,7 @@ impl HexViewer {
             ui.add_space(1.5);
             ui.add(
                 egui::TextEdit::singleline(&mut self.addr.new_str)
-                    .desired_width(ui.available_width() - 70.0)
+                    .desired_width(ui.available_width() - 70.0),
             );
         });
 

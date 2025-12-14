@@ -17,7 +17,7 @@ impl HexViewer {
     pub(crate) fn show_jumpto_contents(&mut self, ui: &mut egui::Ui) {
         let textedit = ui.add(
             egui::TextEdit::singleline(&mut self.jump_to.input)
-                .desired_width(ui.available_width() - 30.0)
+                .desired_width(ui.available_width() - 30.0),
         );
 
         if textedit.has_focus() {
