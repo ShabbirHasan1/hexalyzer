@@ -1,4 +1,4 @@
-use crate::ui_events::EventManager;
+use crate::ui_events::collect_ui_events;
 use crate::{HexViewerApp, colors};
 use eframe::egui;
 use std::ops::Range;
@@ -22,6 +22,9 @@ impl HexViewerApp {
                 })
                 .auto_shrink([false; 2])
                 .show_rows(ui, row_height, total_rows, |ui, row_range| {
+                    // Collect input events once per frame and store in the app state
+                    self.events = collect_ui_events(ui);
+                    // Draw the main canvas with hex content
                     self.draw_main_canvas(ui, row_range);
                 })
         });
@@ -32,23 +35,23 @@ impl HexViewerApp {
     }
 
     fn draw_main_canvas(&mut self, ui: &mut egui::Ui, row_range: Range<usize>) {
-        // Get state of the mouse click
-        let pointer_down = EventManager::is_pointer_down(ui);
-        let pointer_hover = EventManager::get_pointer_hover(ui);
+        // Get state of the mouse click from aggregated events
+        let pointer_down = self.events.pointer_down;
+        let pointer_hover = self.events.pointer_hover;
 
         // Detect released clicked
         if !pointer_down {
             self.selection.released = true;
         }
 
-        // Get state of key press
-        let typed_char = EventManager::get_keyboard_input_char(ui);
+        // Get state of key press (hex chars) from aggregated events
+        let typed_char = self.events.last_hex_char_released;
 
         // Update byte edit buffer base on the key press
         self.update_edit_buffer(typed_char);
 
         // Cancel byte editing / selection on Esc press
-        if ui.input(|i| i.key_pressed(egui::Key::Escape)) {
+        if self.events.escape_pressed {
             if !self.editor.in_progress {
                 self.selection.clear();
             }
@@ -122,6 +125,10 @@ impl HexViewerApp {
                     && byte.is_some()
                     && button.rect.contains(pointer_hover.unwrap())
                 {
+                    // Force text edit boxes to loose focus if selection is updated
+                    self.search.loose_focus();
+                    self.jump_to.loose_focus();
+
                     self.selection.update(addr);
                 }
 

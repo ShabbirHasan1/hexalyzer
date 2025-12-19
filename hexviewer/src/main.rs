@@ -76,6 +76,7 @@ impl eframe::App for HexViewerApp {
 }
 
 // TODO for MVP:
+// Edge cases - re-addr when no ih, etc..
 // Drag and drop files?
 // Verify export works OK
 // Add content to help

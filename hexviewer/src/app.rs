@@ -2,6 +2,7 @@ use crate::address::Address;
 use crate::byteedit::ByteEdit;
 use crate::selection::Selection;
 use crate::ui_jumpto::JumpTo;
+use crate::ui_events::EventState;
 use crate::ui_popup::Popup;
 use crate::ui_search::Search;
 use intelhex::IntelHex;
@@ -33,6 +34,8 @@ pub struct HexViewerApp {
     pub jump_to: JumpTo,
     /// Pop up handler
     pub popup: Popup,
+    /// Aggregated per-frame input state
+    pub events: EventState,
 }
 
 impl Default for HexViewerApp {
@@ -48,6 +51,7 @@ impl Default for HexViewerApp {
             search: Search::default(),
             jump_to: JumpTo::default(),
             popup: Popup::default(),
+            events: EventState::default(),
         }
     }
 }
@@ -62,5 +66,6 @@ impl HexViewerApp {
         self.search = Search::default();
         self.jump_to = JumpTo::default();
         self.popup = Popup::default();
+        self.events = EventState::default();
     }
 }

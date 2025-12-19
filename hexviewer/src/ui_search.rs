@@ -1,5 +1,4 @@
 use crate::app::HexViewerApp;
-use crate::ui_events::EventManager;
 use crate::utils::{parse_hex_str_into_vec, search_bmh};
 use eframe::egui;
 
@@ -13,6 +12,7 @@ pub(crate) struct Search {
     last_input: String,
     idx: usize,
     force: bool,
+    loose_focus: bool,
 }
 
 impl Search {
@@ -37,6 +37,10 @@ impl Search {
         // Set force flag
         self.force = true;
     }
+
+    pub(crate) fn loose_focus(&mut self) {
+        self.loose_focus = true;
+    }
 }
 
 impl HexViewerApp {
@@ -47,12 +51,21 @@ impl HexViewerApp {
                 .desired_width(ui.available_width() - 30.0),
         );
 
+        if self.search.loose_focus {
+            textedit.surrender_focus();
+            self.search.loose_focus = false;
+        }
+
         if textedit.has_focus() {
             self.jump_to.has_focus = false;
             self.search.has_focus = true;
+
+            // Clear the selection to avoid modifying bytes
+            // while typing in the search area
+            self.selection.clear();
         }
 
-        let key = EventManager::get_keyboard_input_key(ui); // get one event per cycle
+        let key = self.events.last_key_released; // get one event per cycle
         if (key.is_some() && key.unwrap() == egui::Key::Enter && self.search.has_focus)
             || self.search.force
         {

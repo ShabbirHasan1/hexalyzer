@@ -1,5 +1,4 @@
 use crate::app::HexViewerApp;
-use crate::ui_events::EventManager;
 use eframe::egui;
 
 #[derive(Default)]
@@ -10,6 +9,13 @@ pub(crate) struct JumpTo {
     pub(crate) addr: Option<usize>,
     /// User input string
     input: String,
+    loose_focus: bool,
+}
+
+impl JumpTo {
+    pub(crate) fn loose_focus(&mut self) {
+        self.loose_focus = true;
+    }
 }
 
 impl HexViewerApp {
@@ -20,12 +26,21 @@ impl HexViewerApp {
                 .desired_width(ui.available_width() - 30.0),
         );
 
+        if self.jump_to.loose_focus {
+            textedit.surrender_focus();
+            self.jump_to.loose_focus = false;
+        }
+
         if textedit.has_focus() {
             self.search.has_focus = false;
             self.jump_to.has_focus = true;
+
+            // Clear the selection to avoid modifying bytes
+            // while typing in the jumpto area
+            self.selection.clear();
         }
 
-        if let Some(key) = EventManager::get_keyboard_input_key(ui)
+        if let Some(key) = self.events.last_key_released
             && key == egui::Key::Enter
             && self.jump_to.has_focus
         {
