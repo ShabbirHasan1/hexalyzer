@@ -36,15 +36,20 @@ const fn key_to_hex_char(key: egui::Key) -> Option<char> {
 /// Collect events once per frame and return aggregated state
 pub(crate) fn collect_ui_events(ui: &egui::Ui) -> EventState {
     ui.input(|i| {
-        let mut state = EventState::default();
-
-        // Pointer state
-        state.pointer_down = i.pointer.primary_down();
-        state.pointer_hover = i.pointer.hover_pos();
+        let mut state = EventState {
+            pointer_down: i.pointer.primary_down(),
+            pointer_hover: i.pointer.hover_pos(),
+            ..Default::default()
+        };
 
         // Key press events (only consider key releases)
         for event in &i.events {
-            if let egui::Event::Key { key, pressed: false, .. } = event {
+            if let egui::Event::Key {
+                key,
+                pressed: false,
+                ..
+            } = event
+            {
                 state.last_key_released = Some(*key);
                 if let Some(ch) = key_to_hex_char(*key) {
                     state.last_hex_char_released = Some(ch);
@@ -52,7 +57,7 @@ pub(crate) fn collect_ui_events(ui: &egui::Ui) -> EventState {
             }
         }
 
-        // direct query for Escape pressed this frame (not release)
+        // Direct query for Escape pressed this frame (not release)
         state.escape_pressed = i.key_pressed(egui::Key::Escape);
 
         state

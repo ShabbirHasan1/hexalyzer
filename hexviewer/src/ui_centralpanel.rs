@@ -1,3 +1,4 @@
+use crate::ui_button::light_mono_button;
 use crate::ui_events::collect_ui_events;
 use crate::{HexViewerApp, colors};
 use eframe::egui;
@@ -85,6 +86,9 @@ impl HexViewerApp {
 
             // Hex bytes representation row
             for addr in start..end {
+                // Remove spacing between buttons
+                ui.spacing_mut().item_spacing.x = 0.0;
+
                 // Determine is the current byte selected
                 let byte = self.ih.get_byte(addr);
                 let is_selected = byte.is_some() && self.selection.is_addr_within_range(addr);
@@ -108,15 +112,11 @@ impl HexViewerApp {
                 };
 
                 // Show byte as a button
-                let button = ui.add_sized(
-                    [21.0, 18.0],
-                    egui::Button::new(
-                        egui::RichText::new(display_value)
-                            .monospace()
-                            .size(12.0)
-                            .color(bg_color),
-                    )
-                    .fill(colors::TRANSPARENT),
+                let button = light_mono_button(
+                    ui,
+                    egui::Vec2::new(21.0, 18.0),
+                    display_value.as_str(),
+                    bg_color,
                 );
 
                 // Update the selection range
@@ -138,9 +138,6 @@ impl HexViewerApp {
                 // Add space every 8 bytes
                 if (addr + 1) % 8 == 0 {
                     ui.add_space(5.0);
-                } else {
-                    // Make space between buttons as small as possible
-                    ui.add_space(-6.0);
                 }
             }
 
@@ -149,6 +146,9 @@ impl HexViewerApp {
 
             // ASCII representation row
             for addr in start..end {
+                // Spacing between ascii labels
+                ui.spacing_mut().item_spacing.x = 2.0;
+
                 // Determine display char
                 let byte = self.ih.get_byte(addr);
                 let ch = if let Some(b) = byte {
@@ -166,9 +166,6 @@ impl HexViewerApp {
                         .color(colors::GRAY_160)
                         .monospace(),
                 ));
-
-                // Make space between labels as small as possible
-                ui.add_space(-4.0);
 
                 // Update the selection range
                 if pointer_down

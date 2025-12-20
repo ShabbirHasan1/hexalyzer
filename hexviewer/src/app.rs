@@ -1,8 +1,8 @@
 use crate::address::Address;
 use crate::byteedit::ByteEdit;
 use crate::selection::Selection;
-use crate::ui_jumpto::JumpTo;
 use crate::ui_events::EventState;
+use crate::ui_jumpto::JumpTo;
 use crate::ui_popup::Popup;
 use crate::ui_search::Search;
 use intelhex::IntelHex;

@@ -148,7 +148,12 @@ impl HexViewerApp {
                         ui.label(format_float(val_f64));
                         ui.end_row();
                         let val_bin = format!("{:064b}", val_u64);
-                        let multiline = format!("{}\n{}\n{}", &val_bin[0..24], &val_bin[24..48], &val_bin[48..64]);
+                        let multiline = format!(
+                            "{}\n{}\n{}",
+                            &val_bin[0..24],
+                            &val_bin[24..48],
+                            &val_bin[48..64]
+                        );
                         ui.label("bin");
                         ui.label(multiline);
                     }

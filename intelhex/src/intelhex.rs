@@ -344,6 +344,39 @@ impl IntelHex {
         Ok(())
     }
 
+    pub fn write_bin<P: AsRef<Path>>(&mut self, filepath: P) -> Result<(), Box<dyn Error>> {
+        // Ensure the parent directory exists
+        if let Some(parent) = filepath.as_ref().parent() {
+            std::fs::create_dir_all(parent)?;
+        }
+
+        let file = std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(true)
+            .open(filepath)?;
+
+        // Wrap in BufWriter for efficient line-by-line writing
+        let mut writer = std::io::BufWriter::new(file);
+
+        let start = self.get_min_addr().unwrap_or(0);
+        let mut current_addr = start;
+
+        for (addr, byte) in self.buffer.iter() {
+            // Fill gaps
+            while current_addr < *addr {
+                writer.write_all(&[0x00])?;
+                current_addr += 1;
+            }
+
+            // Write actual byte
+            writer.write_all(&[*byte])?;
+            current_addr += 1;
+        }
+
+        Ok(())
+    }
+
     /// Get copy of the data buffer as BTreeMap from IntelHex.
     ///
     /// # Example

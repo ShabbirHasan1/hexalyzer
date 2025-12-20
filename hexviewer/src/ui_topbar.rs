@@ -3,6 +3,25 @@ use crate::loader;
 use crate::ui_popup::PopupType;
 use eframe::egui;
 use intelhex::IntelHex;
+use std::error::Error;
+
+enum SaveFormat {
+    Binary,
+    Hex,
+}
+
+fn format_from_extension(path: &std::path::Path) -> Option<SaveFormat> {
+    match path
+        .extension()
+        .and_then(|ext| ext.to_str())
+        .map(|ext| ext.to_ascii_lowercase())?
+        .as_str()
+    {
+        "bin" => Some(SaveFormat::Binary),
+        "hex" => Some(SaveFormat::Hex),
+        _ => None,
+    }
+}
 
 impl HexViewerApp {
     pub(crate) fn show_top_bar(&mut self, ctx: &egui::Context) {
@@ -37,10 +56,19 @@ impl HexViewerApp {
 
                         // EXPORT BUTTON
                         if ui.button("Export").clicked()
-                            && let Some(path) =
-                                rfd::FileDialog::new().set_title("Save As").save_file()
+                            && let Some(path) = rfd::FileDialog::new()
+                                .set_title("Save As")
+                                .add_filter("Binary", &["bin"])
+                                .add_filter("Hex", &["hex"])
+                                .save_file()
                         {
-                            match self.ih.write_hex(path) {
+                            let format = format_from_extension(&path).unwrap_or(SaveFormat::Hex);
+
+                            let res: Result<(), Box<dyn Error>> = match format {
+                                SaveFormat::Binary => self.ih.write_bin(path),
+                                SaveFormat::Hex => self.ih.write_hex(path),
+                            };
+                            match res {
                                 Ok(()) => {}
                                 Err(msg) => {
                                     self.error = Some(msg.to_string());
@@ -60,7 +88,6 @@ impl HexViewerApp {
 
                     // VIEW BUTTON
                     ui.menu_button("View", |ui| {
-
                         ui.label("Select Bytes per Row:");
 
                         ui.add_space(3.0);

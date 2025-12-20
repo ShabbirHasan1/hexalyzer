@@ -11,6 +11,7 @@ mod app;
 mod byteedit;
 mod loader;
 mod selection;
+mod ui_button;
 mod ui_centralpanel;
 mod ui_events;
 mod ui_fileinfo;
@@ -31,7 +32,7 @@ use eframe::egui::ViewportBuilder;
 pub(crate) mod colors {
     use eframe::egui::Color32;
 
-    pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
+    // pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
     pub const LIGHT_BLUE: Color32 = Color32::from_rgba_premultiplied(33, 81, 109, 20);
     pub const MUD: Color32 = Color32::from_rgba_premultiplied(54, 44, 19, 20);
     pub const GREEN: Color32 = Color32::from_rgba_premultiplied(35, 53, 38, 20);
@@ -57,6 +58,10 @@ fn main() -> eframe::Result<()> {
 
 impl eframe::App for HexViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        // let dt = ctx.input(|i| i.stable_dt);
+        // let fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
+        // println!("FPS: {:.1}", fps);
+
         self.show_top_bar(ctx);
 
         // TODO: move this somewhere
