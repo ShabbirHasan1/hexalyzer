@@ -9,6 +9,7 @@
 mod address;
 mod app;
 mod byteedit;
+mod dragandrop;
 mod loader;
 mod selection;
 mod ui_button;
@@ -17,11 +18,11 @@ mod ui_events;
 mod ui_fileinfo;
 mod ui_inspector;
 mod ui_jumpto;
+mod ui_menubar;
 mod ui_popup;
 mod ui_scrollarea;
 mod ui_search;
 mod ui_sidepanel;
-mod ui_topbar;
 mod utils;
 
 use crate::ui_popup::PopupType;
@@ -62,7 +63,7 @@ impl eframe::App for HexViewerApp {
         // let fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
         // println!("FPS: {:.1}", fps);
 
-        self.show_top_bar(ctx);
+        self.show_menu_bar(ctx);
 
         // TODO: move this somewhere
         if self.error.is_some() {
@@ -77,14 +78,14 @@ impl eframe::App for HexViewerApp {
         } else {
             self.show_central_panel(ctx);
         }
+
+        self.handle_drag_and_drop(ctx);
     }
 }
 
 // TODO for MVP:
-// Edge cases - re-addr when no ih, etc..
 // Drag and drop files?
 // Verify export works OK
-// Add content to help
 // Verify performance acceptable (cap if needed)
 // Polish up code
 // Add documentation

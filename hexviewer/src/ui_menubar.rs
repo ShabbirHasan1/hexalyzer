@@ -1,12 +1,10 @@
 use crate::HexViewerApp;
-use crate::loader;
 use crate::ui_popup::PopupType;
 use eframe::egui;
-use intelhex::IntelHex;
 use std::error::Error;
 
 enum SaveFormat {
-    Binary,
+    Bin,
     Hex,
 }
 
@@ -17,14 +15,14 @@ fn format_from_extension(path: &std::path::Path) -> Option<SaveFormat> {
         .map(|ext| ext.to_ascii_lowercase())?
         .as_str()
     {
-        "bin" => Some(SaveFormat::Binary),
+        "bin" => Some(SaveFormat::Bin),
         "hex" => Some(SaveFormat::Hex),
         _ => None,
     }
 }
 
 impl HexViewerApp {
-    pub(crate) fn show_top_bar(&mut self, ctx: &egui::Context) {
+    pub(crate) fn show_menu_bar(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("menubar").show(ctx, |ui| {
             ui.add_space(3.0);
 
@@ -37,21 +35,7 @@ impl HexViewerApp {
                             && let Some(path) =
                                 rfd::FileDialog::new().set_title("Open File").pick_file()
                         {
-                            let mut ih = IntelHex::new();
-                            let res = loader::load_file(&path, &mut ih);
-
-                            if let Err(msg) = res {
-                                self.error = Some(msg.to_string());
-                            } else {
-                                // Clear the state of the app
-                                self.clear();
-
-                                // Load the IntelHex
-                                self.ih = ih;
-
-                                // Fill min/max addresses
-                                self.addr.update_range(&self.ih);
-                            }
+                            self.load_file(&path);
                         }
 
                         // EXPORT BUTTON
@@ -62,10 +46,10 @@ impl HexViewerApp {
                                 .add_filter("Hex", &["hex"])
                                 .save_file()
                         {
-                            let format = format_from_extension(&path).unwrap_or(SaveFormat::Hex);
+                            let format = format_from_extension(&path).unwrap_or(SaveFormat::Bin);
 
                             let res: Result<(), Box<dyn Error>> = match format {
-                                SaveFormat::Binary => self.ih.write_bin(path),
+                                SaveFormat::Bin => self.ih.write_bin(path),
                                 SaveFormat::Hex => self.ih.write_hex(path),
                             };
                             match res {
@@ -80,7 +64,7 @@ impl HexViewerApp {
                     // EDIT BUTTON
                     ui.menu_button("Edit", |ui| {
                         // OPEN BUTTON
-                        if ui.button("Re-address").clicked() {
+                        if ui.button("Re-address").clicked() && self.ih.size > 0 {
                             self.popup.active = true;
                             self.popup.ptype = Some(PopupType::ReAddr);
                         }

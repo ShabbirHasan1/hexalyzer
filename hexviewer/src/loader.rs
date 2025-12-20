@@ -1,5 +1,5 @@
+use crate::app::HexViewerApp;
 use intelhex::IntelHex;
-use std::error::Error;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -39,22 +39,40 @@ fn detect_file_kind(path: &PathBuf) -> std::io::Result<FileKind> {
     Ok(FileKind::Bin)
 }
 
-pub(crate) fn load_file(path: &PathBuf, ih: &mut IntelHex) -> Result<(), Box<dyn Error>> {
-    let file_type = match detect_file_kind(path) {
-        Ok(kind) => kind,
-        Err(err) => {
-            return Err(Box::new(err));
-        }
-    };
+impl HexViewerApp {
+    pub(crate) fn load_file(&mut self, path: &PathBuf) {
+        let mut ih = IntelHex::new();
 
-    match file_type {
-        FileKind::Hex => ih.load_hex(path),
-        FileKind::Bin => {
-            // Set base addr to 0 to avoid complex logic around waiting
-            // to fill the pop-up. Can re-addr later.
-            ih.load_bin(path, 0)
+        let file_type = match detect_file_kind(path) {
+            Ok(kind) => kind,
+            Err(err) => {
+                self.error = Some(err.to_string());
+                return;
+            }
+        };
+
+        let res = match file_type {
+            FileKind::Hex => ih.load_hex(path),
+            FileKind::Bin => {
+                // Set base addr to 0 to avoid complex logic around waiting
+                // to fill the pop-up. Can re-addr later.
+                ih.load_bin(path, 0)
+            }
+            FileKind::Elf => Err("ELF files are not yet supported".into()),
+            FileKind::Unknown => Err("Could not determine the file type".into()),
+        };
+
+        if let Err(msg) = res {
+            self.error = Some(msg.to_string());
+        } else {
+            // Clear the state of the app
+            self.clear();
+
+            // Load the IntelHex
+            self.ih = ih;
+
+            // Fill min/max addresses
+            self.addr.update_range(&self.ih);
         }
-        FileKind::Elf => Err("ELF files are not yet supported".into()),
-        FileKind::Unknown => Err("Could not determine the file type".into()),
     }
 }
