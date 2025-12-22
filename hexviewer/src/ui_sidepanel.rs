@@ -26,19 +26,29 @@ impl HexViewerApp {
                             .num_columns(2) // two columns: label + value
                             .spacing([30.0, 4.0]) // horizontal & vertical spacing
                             .show(ui, |ui| {
-                                ui.label("File Name");
-
+                                ui.with_layout(
+                                    egui::Layout::left_to_right(egui::Align::LEFT),
+                                    |ui| {
+                                        ui.label("File Name");
+                                    },
+                                );
                                 // Wrap the name + show the filepath on hover
-                                ui.add(
+                                let response = ui.add(
                                     egui::Label::new(filename)
                                         .wrap()
                                         .sense(egui::Sense::hover()),
-                                )
-                                .on_hover_text(&filepath);
-
+                                );
+                                if !filepath.is_empty() {
+                                    response.on_hover_text(&filepath);
+                                }
                                 ui.end_row();
 
-                                ui.label("File Size");
+                                ui.with_layout(
+                                    egui::Layout::left_to_right(egui::Align::LEFT),
+                                    |ui| {
+                                        ui.label("File Size");
+                                    },
+                                );
                                 let size = format_with_separators(self.ih.size);
                                 ui.label(format!("{size} bytes"));
                                 ui.end_row();

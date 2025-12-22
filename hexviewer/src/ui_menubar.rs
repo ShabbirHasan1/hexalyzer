@@ -59,6 +59,12 @@ impl HexViewerApp {
                                 }
                             }
                         }
+
+                        // CLOSE BUTTON
+                        if ui.button("Close").clicked()
+                        {
+                            self.clear();
+                        }
                     });
 
                     // EDIT BUTTON
