@@ -61,8 +61,7 @@ impl HexViewerApp {
                         }
 
                         // CLOSE BUTTON
-                        if ui.button("Close").clicked()
-                        {
+                        if ui.button("Close").clicked() {
                             self.clear();
                         }
                     });

@@ -9,7 +9,7 @@ impl HexViewerApp {
     )]
     /// Get scroll offset along Y axis
     pub(crate) fn get_scroll_offset(&mut self, ui: &egui::Ui, addr: usize) -> f32 {
-        let row_idx = (addr - self.addr.min) / self.bytes_per_row;
+        let row_idx = addr.saturating_sub(self.addr.min) / self.bytes_per_row;
 
         // Handle edge case
         if row_idx > f32::MAX as usize {

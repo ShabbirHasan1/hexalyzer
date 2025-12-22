@@ -65,8 +65,7 @@ impl HexViewerApp {
             self.selection.clear();
         }
 
-        let key = self.events.last_key_released; // get one event per cycle
-        if (key == Some(egui::Key::Enter) && self.search.has_focus) || self.search.force {
+        if (self.events.enter_released && self.search.has_focus) || self.search.force {
             // Same input -> move to next result, otherwise -> search again
             if self.search.input == self.search.last_input {
                 if !self.search.results.is_empty() {

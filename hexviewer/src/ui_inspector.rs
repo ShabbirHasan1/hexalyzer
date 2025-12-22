@@ -139,12 +139,9 @@ impl HexViewerApp {
                         ui.end_row();
                         let val_bin = format!("{val_u32:032b}");
                         let multiline = format!("{}\n{}", &val_bin[0..24], &val_bin[24..32]);
-                        ui.with_layout(
-                            egui::Layout::left_to_right(egui::Align::LEFT),
-                            |ui| {
-                                ui.label("bin");
-                            },
-                        );
+                        ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
+                            ui.label("bin");
+                        });
                         ui.label(multiline);
                     }
                     8 => {
@@ -170,12 +167,9 @@ impl HexViewerApp {
                             &val_bin[24..48],
                             &val_bin[48..64]
                         );
-                        ui.with_layout(
-                            egui::Layout::left_to_right(egui::Align::LEFT),
-                            |ui| {
-                                ui.label("bin");
-                            },
-                        );
+                        ui.with_layout(egui::Layout::left_to_right(egui::Align::LEFT), |ui| {
+                            ui.label("bin");
+                        });
                         ui.label(multiline);
                     }
                     _ => {

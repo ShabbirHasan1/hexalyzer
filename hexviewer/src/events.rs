@@ -7,6 +7,7 @@ pub struct EventState {
     pub(crate) pointer_down: bool,
     pub(crate) pointer_hover: Option<egui::Pos2>,
     pub(crate) escape_pressed: bool,
+    pub(crate) enter_released: bool,
 }
 
 #[allow(clippy::enum_glob_use)]
@@ -52,13 +53,19 @@ pub fn collect_ui_events(ui: &egui::Ui) -> EventState {
             } = event
             {
                 state.last_key_released = Some(*key);
+
+                // Store Enter key release directly
+                if state.last_key_released == Some(egui::Key::Enter) {
+                    state.enter_released = true;
+                }
+
                 if let Some(ch) = key_to_hex_char(*key) {
                     state.last_hex_char_released = Some(ch);
                 }
             }
         }
 
-        // Direct query for Escape pressed this frame (not release)
+        // Direct query for Escape pressed this frame
         state.escape_pressed = i.key_pressed(egui::Key::Escape);
 
         state

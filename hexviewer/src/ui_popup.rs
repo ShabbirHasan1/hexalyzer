@@ -1,7 +1,7 @@
 use crate::HexViewerApp;
 use crate::app::colors;
+use crate::events::collect_ui_events;
 use eframe::egui;
-
 //  ========================== Popup Type logic ============================= //
 
 #[derive(Clone, PartialEq, Eq)]
@@ -86,7 +86,7 @@ impl HexViewerApp {
 
         ui.add_space(10.0);
 
-        if ui.button("OK").clicked() {
+        if ui.button("OK").clicked() || self.events.enter_released {
             self.addr.set_new_start_addr();
 
             // Redo search
@@ -110,6 +110,9 @@ impl HexViewerApp {
             .fixed_pos(content_rect.left_top())
             .show(ctx, |ui| {
                 ui.allocate_rect(content_rect, egui::Sense::click());
+
+                // Collect input events once per frame and store in the app state
+                self.events = collect_ui_events(ui);
             });
 
         // Darken the background
@@ -134,7 +137,9 @@ impl HexViewerApp {
             .resizable(false)
             .anchor(egui::Align2::CENTER_CENTER, [0.0, 0.0]);
 
+        // Track OK button or Enter press
         let mut close_confirm = false;
+
         window.show(ctx, |ui| match popup_type {
             PopupType::Error => {
                 let error = self.error.as_deref().unwrap_or("?");
@@ -144,9 +149,7 @@ impl HexViewerApp {
             PopupType::ReAddr => close_confirm = self.display_readdr(ui),
         });
 
-        // nasty logic...
-        is_open = !close_confirm && is_open;
-        self.popup.active = is_open;
+        self.popup.active = !close_confirm && is_open && !self.events.escape_pressed;
 
         // If the window got closed this frame
         if was_open && !self.popup.active {

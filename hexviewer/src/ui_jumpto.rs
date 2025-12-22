@@ -40,10 +40,7 @@ impl HexViewerApp {
             self.selection.clear();
         }
 
-        if let Some(key) = self.events.last_key_released
-            && key == egui::Key::Enter
-            && self.jump_to.has_focus
-        {
+        if self.events.enter_released && self.jump_to.has_focus {
             self.jump_to.addr = usize::from_str_radix(&self.jump_to.input, 16).ok();
         }
     }
