@@ -1,9 +1,9 @@
 use crate::app::HexViewerApp;
-use crate::utils::{parse_hex_str_into_vec, search_bmh};
 use eframe::egui;
+use std::collections::btree_map;
 
 #[derive(Default)]
-pub(crate) struct Search {
+pub struct Search {
     pub(crate) has_focus: bool,
     pub(crate) addr: Option<usize>,
     pub(crate) results: Vec<usize>,
@@ -38,7 +38,7 @@ impl Search {
         self.force = true;
     }
 
-    pub(crate) fn loose_focus(&mut self) {
+    pub(crate) const fn loose_focus(&mut self) {
         self.loose_focus = true;
     }
 }
@@ -66,29 +66,36 @@ impl HexViewerApp {
         }
 
         let key = self.events.last_key_released; // get one event per cycle
-        if (key.is_some() && key.unwrap() == egui::Key::Enter && self.search.has_focus)
-            || self.search.force
-        {
-            if self.search.input != self.search.last_input {
-                let pattern = parse_hex_str_into_vec(self.search.input.as_str());
+        if (key == Some(egui::Key::Enter) && self.search.has_focus) || self.search.force {
+            // Same input -> move to next result, otherwise -> search again
+            if self.search.input == self.search.last_input {
+                if !self.search.results.is_empty() {
+                    self.search.idx = (self.search.idx + 1) % self.search.results.len();
+                }
+            } else {
+                let input = self.search.input.as_str();
 
+                // Parse str hex representation into Vec<u8>
+                let pattern: Option<Vec<u8>> = if input.len().is_multiple_of(2) {
+                    (0..input.len())
+                        .step_by(2)
+                        .map(|i| u8::from_str_radix(&input[i..i + 2], 16).ok())
+                        .collect()
+                } else {
+                    None
+                };
+
+                // If pattern valid -> search, otherwise -> clear results
                 if let Some(p) = pattern {
-                    // If pattern valid -> search
                     self.search.results = search_bmh(self.ih.iter(), &p);
                     self.search.length = p.len();
                 } else {
-                    // If pattern not valid -> clear results
                     self.search.results.clear();
                 }
 
                 // Reset the state of search
                 self.search.idx = 0;
                 self.search.last_input = self.search.input.clone();
-            } else {
-                // Same input -> move to next result
-                if !self.search.results.is_empty() {
-                    self.search.idx = (self.search.idx + 1) % self.search.results.len();
-                }
             }
 
             // Set address to scroll to (only if not forced)
@@ -101,17 +108,74 @@ impl HexViewerApp {
 
         ui.add_space(5.0);
 
-        let mut label_text = "--".to_string();
-
-        // Show matches count
-        if !self.search.results.is_empty() {
-            label_text = format!(
+        // Show matches count if any
+        let label_text = if self.search.results.is_empty() {
+            "--".to_string()
+        } else {
+            format!(
                 "Hits: {} (Current: {})",
                 self.search.results.len(),
                 self.search.idx + 1
-            );
-        }
+            )
+        };
 
         ui.label(label_text);
     }
+}
+
+// TODO: 1) add SIMD acceleration; 2) Replace with KMP search?
+
+#[allow(
+    clippy::cast_possible_truncation,
+    clippy::cast_sign_loss,
+    clippy::cast_possible_wrap
+)]
+/// Boyer–Moore–Horspool algorithm for `BTreeMap<usize, u8>`.
+/// Returns the starting addresses of all matches.
+fn search_bmh(map_iter: btree_map::Iter<usize, u8>, pattern: &[u8]) -> Vec<usize> {
+    let m = pattern.len();
+    if m == 0 || m > u8::MAX as usize {
+        return vec![];
+    }
+
+    // Consume the iterator once into an indexable representation.
+    // This does not clone the BTreeMap, only copies (usize, u8) pairs.
+    let haystack: Vec<(usize, u8)> = map_iter.map(|(&addr, &byte)| (addr, byte)).collect();
+
+    // Check if length of address is less than the pattern
+    let n = haystack.len();
+    if n < m {
+        return vec![];
+    }
+
+    // Build bad match table
+    let mut bad_match = [m as u8; 256];
+    for i in 0..m - 1 {
+        bad_match[pattern[i] as usize] = (m - 1 - i) as u8;
+    }
+
+    // Prepare result collection
+    let mut results = Vec::new();
+
+    // Main BMH loop
+    let mut i = 0; // index into addrs[]
+    while i <= n - m {
+        // Compare pattern from right to left
+        let mut j = (m - 1) as isize;
+        while j >= 0 && haystack[i + j as usize].1 == pattern[j as usize] {
+            j -= 1;
+        }
+
+        if j < 0 {
+            // Match found
+            results.push(haystack[i].0);
+            i += 1; // advance minimally
+        } else {
+            // Mismatch -> skip using last byte of window
+            let last_byte = haystack[i + m - 1].1;
+            i += bad_match[last_byte as usize] as usize;
+        }
+    }
+
+    results
 }

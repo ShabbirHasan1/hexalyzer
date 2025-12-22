@@ -1,7 +1,7 @@
 use crate::app::HexViewerApp;
 
 #[derive(Default)]
-pub(crate) struct ByteEdit {
+pub struct ByteEdit {
     /// Is byte being edited
     pub(crate) in_progress: bool,
     /// Buffer to store byte data during editing
@@ -18,11 +18,6 @@ impl ByteEdit {
         self.in_progress = false;
         self.addr = None;
         self.buffer.clear();
-    }
-
-    /// Is provided address same as being edited
-    pub(crate) fn is_addr_same(&self, addr: Option<[usize; 2]>) -> bool {
-        addr == self.addr
     }
 }
 
@@ -43,7 +38,7 @@ impl HexViewerApp {
             }
         } else if self.editor.in_progress {
             // If other bytes got selected - clear and return
-            if !self.editor.is_addr_same(self.selection.range) {
+            if self.editor.addr != self.selection.range {
                 self.editor.clear();
             }
 
@@ -60,18 +55,16 @@ impl HexViewerApp {
                     && let Some([start, end]) = self.editor.addr
                 {
                     // Handle reversed range
-                    let (s, e) = if start <= end {
-                        (start, end)
-                    } else {
-                        (end, start)
-                    };
+                    let s = start.min(end);
+                    let e = start.max(end);
 
                     // Update the bytes in the map. If the byte is actually changed -
                     // insert its address into Vec that tracks modified bytes.
                     for addr in s..=e {
                         let prev_value = self.ih.get_byte(addr);
-                        if let Some(()) = self.ih.update_byte(addr, value).ok()
-                            && value != prev_value.unwrap()
+                        if self.ih.update_byte(addr, value).ok() == Some(())
+                            && let Some(prev) = prev_value
+                            && value != prev
                         {
                             self.editor.modified.push(addr);
                         }

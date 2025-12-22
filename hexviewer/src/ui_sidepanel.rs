@@ -1,4 +1,5 @@
 use crate::app::HexViewerApp;
+use crate::ui_inspector::format_with_separators;
 use eframe::egui;
 
 impl HexViewerApp {
@@ -13,7 +14,36 @@ impl HexViewerApp {
                     .default_open(true)
                     .show(ui, |ui| {
                         ui.add_space(5.0);
-                        self.show_file_info_contents(ui);
+
+                        let filepath = self.ih.filepath.to_string_lossy().into_owned();
+                        let filename = self
+                            .ih
+                            .filepath
+                            .file_name()
+                            .map_or_else(|| "--".to_string(), |n| n.to_string_lossy().into_owned());
+
+                        egui::Grid::new("file_info_grid")
+                            .num_columns(2) // two columns: label + value
+                            .spacing([30.0, 4.0]) // horizontal & vertical spacing
+                            .show(ui, |ui| {
+                                ui.label("File Name");
+
+                                // Wrap the name + show the filepath on hover
+                                ui.add(
+                                    egui::Label::new(filename)
+                                        .wrap()
+                                        .sense(egui::Sense::hover()),
+                                )
+                                .on_hover_text(&filepath);
+
+                                ui.end_row();
+
+                                ui.label("File Size");
+                                let size = format_with_separators(self.ih.size);
+                                ui.label(format!("{size} bytes"));
+                                ui.end_row();
+                            });
+
                         ui.add_space(5.0);
                     });
 

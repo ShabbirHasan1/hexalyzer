@@ -1,5 +1,5 @@
 #[derive(Debug, Default)]
-pub(crate) struct Selection {
+pub struct Selection {
     /// Range is a start and end addresses of selected bytes.
     /// Inverted if selection is moving right-to-left.
     pub(crate) range: Option<[usize; 2]>,
@@ -28,7 +28,7 @@ impl Selection {
         sel[1] = addr;
     }
 
-    pub(crate) fn clear(&mut self) {
+    pub(crate) const fn clear(&mut self) {
         self.range = None;
         self.released = false;
     }

@@ -5,7 +5,7 @@ use std::io::Read;
 use std::path::PathBuf;
 
 #[derive(Debug)]
-pub(crate) enum FileKind {
+pub enum FileKind {
     Hex,
     Bin,
     Elf,

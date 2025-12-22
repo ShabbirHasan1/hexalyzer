@@ -2,7 +2,7 @@ use crate::app::HexViewerApp;
 use eframe::egui;
 
 #[derive(Default)]
-pub(crate) struct JumpTo {
+pub struct JumpTo {
     /// Is the text edit window in focus
     pub(crate) has_focus: bool,
     /// Address to jump to
@@ -13,7 +13,7 @@ pub(crate) struct JumpTo {
 }
 
 impl JumpTo {
-    pub(crate) fn loose_focus(&mut self) {
+    pub(crate) const fn loose_focus(&mut self) {
         self.loose_focus = true;
     }
 }

@@ -1,21 +1,21 @@
-// #![warn(clippy::all)]
-// #![warn(clippy::pedantic)]
-// #![warn(clippy::nursery)]
-// // Optional stricter rules
-// #![warn(clippy::unwrap_used)]
-// #![warn(clippy::expect_used)]
-// #![warn(clippy::panic)]
+#![warn(
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery,
+    clippy::unwrap_used,
+    clippy::expect_used,
+    clippy::panic
+)]
 
 mod address;
 mod app;
 mod byteedit;
-mod dragandrop;
+mod events;
 mod loader;
 mod selection;
 mod ui_button;
 mod ui_centralpanel;
-mod ui_events;
-mod ui_fileinfo;
+mod ui_filedrop;
 mod ui_inspector;
 mod ui_jumpto;
 mod ui_menubar;
@@ -23,24 +23,11 @@ mod ui_popup;
 mod ui_scrollarea;
 mod ui_search;
 mod ui_sidepanel;
-mod utils;
 
 use crate::ui_popup::PopupType;
 use app::HexViewerApp;
 use eframe::egui;
 use eframe::egui::ViewportBuilder;
-
-pub(crate) mod colors {
-    use eframe::egui::Color32;
-
-    // pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
-    pub const LIGHT_BLUE: Color32 = Color32::from_rgba_premultiplied(33, 81, 109, 20);
-    pub const MUD: Color32 = Color32::from_rgba_premultiplied(54, 44, 19, 20);
-    pub const GREEN: Color32 = Color32::from_rgba_premultiplied(35, 53, 38, 20);
-    pub const GRAY_160: Color32 = Color32::from_gray(160);
-    pub const GRAY_210: Color32 = Color32::from_gray(210);
-    pub const SHADOW: Color32 = Color32::from_black_alpha(150);
-}
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
@@ -84,9 +71,7 @@ impl eframe::App for HexViewerApp {
 }
 
 // TODO for MVP:
-// Drag and drop files?
 // Verify export works OK
-// Verify performance acceptable (cap if needed)
 // Polish up code
 // Add documentation
 

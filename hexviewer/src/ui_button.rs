@@ -1,6 +1,6 @@
 use eframe::egui;
 
-pub(crate) fn light_mono_button(
+pub fn light_mono_button(
     ui: &mut egui::Ui,
     size: egui::Vec2,
     text: &str,

@@ -12,7 +12,7 @@ fn format_from_extension(path: &std::path::Path) -> Option<SaveFormat> {
     match path
         .extension()
         .and_then(|ext| ext.to_str())
-        .map(|ext| ext.to_ascii_lowercase())?
+        .map(str::to_ascii_lowercase)?
         .as_str()
     {
         "bin" => Some(SaveFormat::Bin),

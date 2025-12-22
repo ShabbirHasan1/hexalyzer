@@ -1,6 +1,7 @@
+use crate::HexViewerApp;
+use crate::app::colors;
+use crate::events::collect_ui_events;
 use crate::ui_button::light_mono_button;
-use crate::ui_events::collect_ui_events;
-use crate::{HexViewerApp, colors};
 use eframe::egui;
 use std::ops::Range;
 
@@ -57,7 +58,7 @@ impl HexViewerApp {
                 self.selection.clear();
             }
             self.search.clear();
-            self.editor.clear()
+            self.editor.clear();
         }
 
         // Draw rows
@@ -79,7 +80,7 @@ impl HexViewerApp {
             let end = start + self.bytes_per_row;
 
             // Display address (fixed width, monospaced)
-            ui.monospace(format!("{:08X}", start));
+            ui.monospace(format!("{start:08X}"));
 
             // Add space before hex block
             ui.add_space(16.0);
@@ -105,7 +106,7 @@ impl HexViewerApp {
                     if is_selected && self.editor.in_progress {
                         self.editor.buffer.clone()
                     } else {
-                        format!("{:02X}", b)
+                        format!("{b:02X}")
                     }
                 } else {
                     "--".to_string()
@@ -121,9 +122,9 @@ impl HexViewerApp {
 
                 // Update the selection range
                 if pointer_down
-                    && pointer_hover.is_some()
                     && byte.is_some()
-                    && button.rect.contains(pointer_hover.unwrap())
+                    && let Some(hover) = pointer_hover
+                    && button.rect.contains(hover)
                 {
                     // Force text edit boxes to loose focus if selection is updated
                     self.search.loose_focus();
@@ -151,11 +152,7 @@ impl HexViewerApp {
 
                 // Determine display char
                 let byte = self.ih.get_byte(addr);
-                let ch = if let Some(b) = byte {
-                    if b.is_ascii_graphic() { b as char } else { '.' }
-                } else {
-                    ' '
-                };
+                let ch = byte.map_or(' ', |b| if b.is_ascii_graphic() { b as char } else { '.' });
 
                 // Determine is char selected
                 let is_selected = byte.is_some() && self.selection.is_addr_within_range(addr);
@@ -169,9 +166,9 @@ impl HexViewerApp {
 
                 // Update the selection range
                 if pointer_down
-                    && pointer_hover.is_some()
                     && byte.is_some()
-                    && label.rect.contains(pointer_hover.unwrap())
+                    && let Some(hover) = pointer_hover
+                    && label.rect.contains(hover)
                 {
                     self.selection.update(addr);
                 }

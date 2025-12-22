@@ -1,4 +1,5 @@
-use crate::{HexViewerApp, colors};
+use crate::HexViewerApp;
+use crate::app::colors;
 use eframe::egui;
 
 //  ========================== Popup Type logic ============================= //
@@ -13,9 +14,9 @@ pub enum PopupType {
 impl PopupType {
     pub const fn title(&self) -> &'static str {
         match self {
-            PopupType::Error => "Error",
-            PopupType::About => "About",
-            PopupType::ReAddr => "Re-Address",
+            Self::Error => "Error",
+            Self::About => "About",
+            Self::ReAddr => "Re-Address",
         }
     }
 }
@@ -38,8 +39,8 @@ impl Popup {
 //  ========================== HexViewer logic ============================= //
 
 impl HexViewerApp {
-    fn display_error(&self, ui: &mut egui::Ui) -> bool {
-        ui.label(self.error.as_ref().unwrap());
+    fn display_error(ui: &mut egui::Ui, msg: &str) -> bool {
+        ui.label(msg);
 
         // Add space before close button
         ui.add_space(10.0);
@@ -48,7 +49,7 @@ impl HexViewerApp {
         false
     }
 
-    fn display_about(&self, ui: &mut egui::Ui) -> bool {
+    fn display_about(ui: &mut egui::Ui) -> bool {
         ui.vertical(|ui| {
             ui.add_space(5.0);
 
@@ -59,9 +60,12 @@ impl HexViewerApp {
             ui.separator();
             ui.add_space(3.0);
 
-            ui.label("The app is built with *egui* - immediate-mode GUI library.\
-            The hex parsing and writing is handled by IntelHex library, built as part of the same project.\n\n\
-            The app does not support partial file loading (yet?) so RAM usage while working with very large files will be high.");
+            ui.label(
+                "The app is built with *egui* - immediate-mode GUI library.\
+            The hex parsing and writing is handled by IntelHex library, built as part of the \
+            same project.\n\nThe app does not support partial file loading (yet?) so RAM usage \
+            while working with very large files will be high.",
+            );
 
             ui.add_space(5.0);
         });
@@ -75,7 +79,7 @@ impl HexViewerApp {
             ui.label("New start address:");
             ui.add_space(1.5);
             ui.add(
-                egui::TextEdit::singleline(&mut self.addr.new_str)
+                egui::TextEdit::singleline(&mut self.addr.new_start)
                     .desired_width(ui.available_width() - 70.0),
             );
         });
@@ -84,6 +88,9 @@ impl HexViewerApp {
 
         if ui.button("OK").clicked() {
             self.addr.set_new_start_addr();
+
+            // Redo search
+            self.search.redo();
 
             // Close the window
             return true;
@@ -115,8 +122,10 @@ impl HexViewerApp {
         let mut is_open = self.popup.active;
         let was_open = self.popup.active;
 
-        // TODO: edge case
-        let popup_type = self.popup.ptype.clone().unwrap();
+        let Some(popup_type) = self.popup.ptype.clone() else {
+            self.popup.clear();
+            return;
+        };
 
         // Display the pop-up
         let window = egui::Window::new(popup_type.title())
@@ -127,8 +136,11 @@ impl HexViewerApp {
 
         let mut close_confirm = false;
         window.show(ctx, |ui| match popup_type {
-            PopupType::Error => close_confirm = self.display_error(ui),
-            PopupType::About => close_confirm = self.display_about(ui),
+            PopupType::Error => {
+                let error = self.error.as_deref().unwrap_or("?");
+                close_confirm = Self::display_error(ui, error);
+            }
+            PopupType::About => close_confirm = Self::display_about(ui),
             PopupType::ReAddr => close_confirm = self.display_readdr(ui),
         });
 

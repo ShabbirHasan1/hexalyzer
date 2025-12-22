@@ -2,17 +2,16 @@ use crate::app::{Endianness, HexViewerApp};
 use eframe::egui;
 use eframe::egui::Ui;
 
+#[allow(clippy::needless_pass_by_value)]
 /// Format the number so that it has separators (for readability)
-fn format_with_separators<T: ToString>(n: T) -> String {
+pub fn format_with_separators<T: ToString>(n: T) -> String {
     let s = n.to_string();
     let mut result = String::new();
 
     // Consider negative sign in front of digits
-    let (sign, digits) = if let Some(stripped) = s.strip_prefix('-') {
-        ("-", stripped)
-    } else {
-        ("", s.as_str())
-    };
+    let (sign, digits) = s
+        .strip_prefix('-')
+        .map_or(("", s.as_str()), |stripped| ("-", stripped));
 
     for (idx, ch) in digits.chars().rev().enumerate() {
         if idx != 0 && idx % 3 == 0 {
@@ -52,6 +51,7 @@ fn format_float<T: Into<f64>>(float_value: T) -> String {
 }
 
 impl HexViewerApp {
+    #[allow(clippy::similar_names, clippy::too_many_lines)]
     pub(crate) fn show_data_inspector_contents(&mut self, ui: &mut Ui) {
         ui.radio_value(&mut self.endianness, Endianness::Little, "Little Endian");
         ui.radio_value(&mut self.endianness, Endianness::Big, "Big Endian");
@@ -67,16 +67,19 @@ impl HexViewerApp {
                 ui.label("Value");
                 ui.end_row();
 
-                if self.selection.range.is_none() {
+                let Some(sel) = self.selection.range else {
                     ui.label("--");
                     ui.label("--");
                     ui.end_row();
                     return;
-                }
+                };
 
-                let sel = self.selection.range.as_ref().unwrap();
-                let min = *sel.iter().min().unwrap();
-                let max = *sel.iter().max().unwrap();
+                let Some(&min) = sel.iter().min() else {
+                    return;
+                };
+                let Some(&max) = sel.iter().max() else {
+                    return;
+                };
 
                 let mut bytes: Vec<u8> = Vec::new();
                 for addr in min..=max {
@@ -99,55 +102,63 @@ impl HexViewerApp {
                         ui.label("i8");
                         ui.label(val_i8.to_string());
                         ui.end_row();
-                        let val_bin = format!("{:08b}", val_u8);
+                        let val_bin = format!("{val_u8:08b}");
                         ui.label("bin");
                         ui.label(val_bin);
                     }
                     2 => {
-                        let val_u16 = u16::from_le_bytes(bytes.as_slice().try_into().unwrap());
+                        let val_u16 =
+                            u16::from_le_bytes(bytes.as_slice().try_into().unwrap_or_default());
                         ui.label("u16");
                         ui.label(format_with_separators(val_u16));
                         ui.end_row();
-                        let val_i16 = i16::from_le_bytes(bytes.as_slice().try_into().unwrap());
+                        let val_i16 =
+                            i16::from_le_bytes(bytes.as_slice().try_into().unwrap_or_default());
                         ui.label("i16");
                         ui.label(format_with_separators(val_i16));
                         ui.end_row();
-                        let val_bin = format!("{:016b}", val_u16);
+                        let val_bin = format!("{val_u16:016b}");
                         ui.label("bin");
                         ui.label(val_bin);
                     }
                     4 => {
-                        let val_u32 = u32::from_le_bytes(bytes.as_slice().try_into().unwrap());
+                        let val_u32 =
+                            u32::from_le_bytes(bytes.as_slice().try_into().unwrap_or_default());
                         ui.label("u32");
                         ui.label(format_with_separators(val_u32));
                         ui.end_row();
-                        let val_i32 = i32::from_le_bytes(bytes.as_slice().try_into().unwrap());
+                        let val_i32 =
+                            i32::from_le_bytes(bytes.as_slice().try_into().unwrap_or_default());
                         ui.label("i32");
                         ui.label(format_with_separators(val_i32));
                         ui.end_row();
-                        let val_f32 = f32::from_le_bytes(bytes.as_slice().try_into().unwrap());
+                        let val_f32 =
+                            f32::from_le_bytes(bytes.as_slice().try_into().unwrap_or_default());
                         ui.label("f32");
                         ui.label(format_float(val_f32));
                         ui.end_row();
-                        let val_bin = format!("{:032b}", val_u32);
+                        let val_bin = format!("{val_u32:032b}");
                         let multiline = format!("{}\n{}", &val_bin[0..24], &val_bin[24..32]);
                         ui.label("bin");
                         ui.label(multiline);
                     }
                     8 => {
-                        let val_u64 = u64::from_le_bytes(bytes.as_slice().try_into().unwrap());
+                        let val_u64 =
+                            u64::from_le_bytes(bytes.as_slice().try_into().unwrap_or_default());
                         ui.label("u64");
                         ui.label(format_with_separators(val_u64));
                         ui.end_row();
-                        let val_i64 = i64::from_le_bytes(bytes.as_slice().try_into().unwrap());
+                        let val_i64 =
+                            i64::from_le_bytes(bytes.as_slice().try_into().unwrap_or_default());
                         ui.label("i64");
                         ui.label(format_with_separators(val_i64));
                         ui.end_row();
-                        let val_f64 = f64::from_le_bytes(bytes.as_slice().try_into().unwrap());
+                        let val_f64 =
+                            f64::from_le_bytes(bytes.as_slice().try_into().unwrap_or_default());
                         ui.label("f64");
                         ui.label(format_float(val_f64));
                         ui.end_row();
-                        let val_bin = format!("{:064b}", val_u64);
+                        let val_bin = format!("{val_u64:064b}");
                         let multiline = format!(
                             "{}\n{}\n{}",
                             &val_bin[0..24],

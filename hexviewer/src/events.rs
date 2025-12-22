@@ -1,7 +1,7 @@
 use eframe::egui;
 
 #[derive(Default, Clone, Copy)]
-pub(crate) struct EventState {
+pub struct EventState {
     pub(crate) last_key_released: Option<egui::Key>,
     pub(crate) last_hex_char_released: Option<char>,
     pub(crate) pointer_down: bool,
@@ -9,6 +9,7 @@ pub(crate) struct EventState {
     pub(crate) escape_pressed: bool,
 }
 
+#[allow(clippy::enum_glob_use)]
 /// Helper for mapping keys to hex chars
 const fn key_to_hex_char(key: egui::Key) -> Option<char> {
     use egui::Key::*;
@@ -34,7 +35,7 @@ const fn key_to_hex_char(key: egui::Key) -> Option<char> {
 }
 
 /// Collect events once per frame and return aggregated state
-pub(crate) fn collect_ui_events(ui: &egui::Ui) -> EventState {
+pub fn collect_ui_events(ui: &egui::Ui) -> EventState {
     ui.input(|i| {
         let mut state = EventState {
             pointer_down: i.pointer.primary_down(),
