@@ -5,7 +5,7 @@ use crate::selection::Selection;
 use crate::ui_jumpto::JumpTo;
 use crate::ui_popup::Popup;
 use crate::ui_search::Search;
-use intelhex::IntelHex;
+use intelhexlib::IntelHex;
 
 pub mod colors {
     use eframe::egui::Color32;

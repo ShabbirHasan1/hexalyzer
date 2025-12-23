@@ -17,6 +17,7 @@ impl HexViewerApp {
             let scroll_area = self.create_scroll_area(ui);
 
             scroll_area
+                .wheel_scroll_multiplier(egui::Vec2 { x: 1.0, y: 0.4 }) // slow vertical scroll
                 .scroll_source(egui::containers::scroll_area::ScrollSource {
                     mouse_wheel: true,
                     scroll_bar: true,

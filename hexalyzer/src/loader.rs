@@ -1,5 +1,5 @@
 use crate::app::HexViewerApp;
-use intelhex::IntelHex;
+use intelhexlib::IntelHex;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;

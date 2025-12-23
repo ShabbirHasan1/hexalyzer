@@ -1,4 +1,4 @@
-use intelhex::{IntelHex, IntelHexError, IntelHexErrorKind};
+use intelhexlib::{IntelHex, IntelHexError, IntelHexErrorKind};
 use std::fs;
 
 #[test]

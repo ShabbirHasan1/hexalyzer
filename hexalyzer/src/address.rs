@@ -1,4 +1,4 @@
-use intelhex::IntelHex;
+use intelhexlib::IntelHex;
 
 #[derive(Default)]
 pub struct Address {

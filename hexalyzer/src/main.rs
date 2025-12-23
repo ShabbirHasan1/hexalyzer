@@ -27,12 +27,12 @@ mod ui_sidepanel;
 use crate::ui_popup::PopupType;
 use app::HexViewerApp;
 use eframe::egui;
-use eframe::egui::ViewportBuilder;
 
 fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
-        vsync: false,
-        viewport: ViewportBuilder::default()
+        vsync: true,
+        viewport: egui::ViewportBuilder::default()
+            .with_icon(load_icon())
             .with_resizable(true)
             .with_inner_size([1280.0, 720.0]),
         ..Default::default()
@@ -46,9 +46,12 @@ fn main() -> eframe::Result<()> {
 
 impl eframe::App for HexViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        // let dt = ctx.input(|i| i.stable_dt);
-        // let fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
-        // println!("FPS: {:.1}", fps);
+        #[cfg(debug_assertions)]
+        {
+            let dt = ctx.input(|i| i.stable_dt);
+            let fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
+            println!("FPS: {fps:.1}");
+        }
 
         self.show_menu_bar(ctx);
 
@@ -67,6 +70,16 @@ impl eframe::App for HexViewerApp {
         }
 
         self.handle_drag_and_drop(ctx);
+    }
+}
+
+fn load_icon() -> egui::IconData {
+    const ICON_RGBA: &[u8] = include_bytes!("../docs/icon.rgba");
+
+    egui::IconData {
+        rgba: ICON_RGBA.to_vec(),
+        width: 128,
+        height: 128,
     }
 }
 
