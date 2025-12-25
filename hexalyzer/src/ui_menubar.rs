@@ -52,11 +52,8 @@ impl HexViewerApp {
                                 SaveFormat::Bin => self.ih.write_bin(path),
                                 SaveFormat::Hex => self.ih.write_hex(path),
                             };
-                            match res {
-                                Ok(()) => {}
-                                Err(msg) => {
-                                    self.error = Some(msg.to_string());
-                                }
+                            if let Err(msg) = res {
+                                self.error = Some(msg.to_string());
                             }
                         }
 

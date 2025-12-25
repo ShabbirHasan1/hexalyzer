@@ -27,6 +27,8 @@ impl PopupType {
 pub struct Popup {
     pub(crate) active: bool,
     pub(crate) ptype: Option<PopupType>,
+    /// If text field is in the popup
+    text_input: String,
 }
 
 impl Popup {
@@ -85,20 +87,23 @@ impl HexViewerApp {
             ui.add_space(3.0);
             ui.label("New start address:");
             ui.add_space(3.0);
-            ui.add(
-                egui::TextEdit::singleline(&mut self.addr.new_start)
+
+            // Add text field to enter new start address
+            let response = ui.add(
+                egui::TextEdit::singleline(&mut self.popup.text_input)
                     .desired_width(ui.available_width() - 70.0),
             );
+
+            // Only allow up to 8 hex digits in the text field
+            if response.changed() {
+                self.popup.text_input.retain(|c| c.is_ascii_hexdigit());
+                self.popup.text_input.truncate(8);
+            }
         });
 
         ui.add_space(8.0);
 
         if ui.button(" OK ").clicked() || self.events.enter_released {
-            self.addr.set_new_start_addr();
-
-            // Redo search
-            self.search.redo();
-
             // Close the window
             return true;
         }
@@ -162,9 +167,12 @@ impl HexViewerApp {
         if was_open && !self.popup.active {
             self.error = None;
 
+            // If the pop-up closed was readdr -> relocate bytes and do some cleanup
             if self.popup.ptype == Some(PopupType::ReAddr) && close_confirm {
+                let addr = usize::from_str_radix(&self.popup.text_input, 16).unwrap_or_default();
+
                 // Re-address the IntelHex
-                match self.ih.relocate(self.addr.min) {
+                match self.ih.relocate(addr) {
                     Ok(()) => {}
                     Err(err) => {
                         self.popup.clear();
@@ -173,11 +181,15 @@ impl HexViewerApp {
                     }
                 }
 
-                // Clear addr
-                self.addr.clear();
+                // Clear text field
+                self.popup.text_input.clear();
 
                 // Re-calculate address range
-                self.addr.update_range(&self.ih);
+                self.addr =
+                    self.ih.get_min_addr().unwrap_or(0)..=self.ih.get_max_addr().unwrap_or(0);
+
+                // Redo search
+                self.search.redo();
             }
 
             self.popup.clear();

@@ -7,7 +7,6 @@
     clippy::panic
 )]
 
-mod address;
 mod app;
 mod byteedit;
 mod events;

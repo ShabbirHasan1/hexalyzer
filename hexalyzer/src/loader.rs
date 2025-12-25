@@ -71,8 +71,8 @@ impl HexViewerApp {
             // Load the IntelHex
             self.ih = ih;
 
-            // Fill min/max addresses
-            self.addr.update_range(&self.ih);
+            // Re-calculate address range
+            self.addr = self.ih.get_min_addr().unwrap_or(0)..=self.ih.get_max_addr().unwrap_or(0);
         }
     }
 }

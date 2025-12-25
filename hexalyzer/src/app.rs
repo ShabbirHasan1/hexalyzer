@@ -1,4 +1,3 @@
-use crate::address::Address;
 use crate::byteedit::ByteEdit;
 use crate::events::EventState;
 use crate::selection::Selection;
@@ -6,6 +5,7 @@ use crate::ui_jumpto::JumpTo;
 use crate::ui_popup::Popup;
 use crate::ui_search::Search;
 use intelhexlib::IntelHex;
+use std::ops::RangeInclusive;
 
 pub mod colors {
     use eframe::egui::Color32;
@@ -26,17 +26,17 @@ pub enum Endianness {
 }
 
 pub struct HexViewerApp {
-    /// `IntelHex` object returned by intelhex library
+    /// `IntelHex` object returned by `intelhexlib`
     pub ih: IntelHex,
-    /// Address handling of the hex data
-    pub addr: Address,
-    /// Bytes per row to display
-    pub bytes_per_row: usize, // TODO: make configurable
+    /// Address range of the hex data
+    pub addr: RangeInclusive<usize>,
+    /// Displayed bytes per row
+    pub bytes_per_row: usize,
     /// Endianness of the hex data
     pub endianness: Endianness,
-    /// Error during intelhex parsing
+    /// Errors during parsing, editing, or writing `IntelHex` file
     pub error: Option<String>,
-    /// Handler for byte editing
+    /// Handler for bytes editing
     pub editor: ByteEdit,
     /// Handler for GUI feature of bytes selection
     pub selection: Selection,
@@ -46,7 +46,7 @@ pub struct HexViewerApp {
     pub jump_to: JumpTo,
     /// Pop up handler
     pub popup: Popup,
-    /// Aggregated per-frame input state
+    /// Per-frame state of user inputs
     pub events: EventState,
 }
 
@@ -54,7 +54,7 @@ impl Default for HexViewerApp {
     fn default() -> Self {
         Self {
             ih: IntelHex::default(),
-            addr: Address::default(),
+            addr: 0..=0,
             bytes_per_row: 16,
             endianness: Endianness::Little,
             error: None,
@@ -71,7 +71,7 @@ impl Default for HexViewerApp {
 impl HexViewerApp {
     pub(crate) fn clear(&mut self) {
         self.ih = IntelHex::default();
-        self.addr = Address::default();
+        self.addr = 0..=0;
         self.error = None;
         self.editor = ByteEdit::default();
         self.selection = Selection::default();

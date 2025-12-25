@@ -8,7 +8,7 @@ use std::ops::Range;
 impl HexViewerApp {
     pub(crate) fn show_central_panel(&mut self, ctx: &egui::Context) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            let total_rows = (self.addr.max - self.addr.min).div_ceil(self.bytes_per_row);
+            let total_rows = (self.addr.end() - self.addr.start()).div_ceil(self.bytes_per_row);
 
             // Get row height in pixels (depends on font size)
             let row_height = ui.text_style_height(&egui::TextStyle::Monospace);
@@ -77,7 +77,7 @@ impl HexViewerApp {
     ) {
         ui.horizontal(|ui| {
             // Start and end addresses
-            let start = self.addr.min + row * self.bytes_per_row;
+            let start = self.addr.start() + row * self.bytes_per_row;
             let end = start + self.bytes_per_row;
 
             // Display address (fixed width, monospaced)
