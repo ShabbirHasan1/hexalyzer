@@ -1,4 +1,4 @@
-//! The 'intelhex' module defines the ['IntelHex'] struct which provides APIs for
+//! The `intelhex` module defines the [`IntelHex`] struct which provides APIs for
 //! loading, modifying and writing Intel HEX files.
 
 use crate::error::{IntelHexError, IntelHexErrorKind};
@@ -17,13 +17,13 @@ pub struct StartAddress {
 }
 
 impl StartAddress {
-    pub fn new(rtype: RecordType, bytes: [u8; 4]) -> Self {
+    pub const fn new(rtype: RecordType, bytes: [u8; 4]) -> Self {
         Self {
             rtype: Some(rtype),
             bytes: Some(bytes),
         }
     }
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.rtype.is_none() && self.bytes.is_none()
     }
 }
@@ -45,7 +45,7 @@ impl Default for IntelHex {
 }
 
 impl IntelHex {
-    /// Creates empty IntelHex struct instance.
+    /// Creates empty `IntelHex` struct instance.
     ///
     /// # Examples
     /// ```
@@ -53,7 +53,8 @@ impl IntelHex {
     ///
     /// let ih = IntelHex::new();
     /// ```
-    pub fn new() -> Self {
+    #[must_use]
+    pub const fn new() -> Self {
         Self {
             filepath: PathBuf::new(),
             size: 0,
@@ -67,7 +68,7 @@ impl IntelHex {
         }
     }
 
-    /// Clears loaded data from the IntelHex struct instance.
+    /// Clears loaded data from the `IntelHex` struct instance.
     ///
     /// # Examples
     /// ```
@@ -100,7 +101,7 @@ impl IntelHex {
                 }
             };
 
-            // Validate checksum of the record
+            // Validate checksum of the record (TODO: remove as already checked inside Record)
             let expected_checksum = Record::calculate_checksum_from_self(&record);
             if record.checksum != expected_checksum {
                 return Err(IntelHexError::ParseRecordError(
@@ -124,7 +125,7 @@ impl IntelHex {
                         addr += 1;
                     }
                 }
-                RecordType::EndOfFile => {}
+                RecordType::EndOfFile => {} // TODO: has to have EOF record
                 RecordType::ExtendedSegmentAddress => {
                     self.offset = (record.data[0] as usize * 256 + record.data[1] as usize) * 16;
                 }
@@ -148,7 +149,7 @@ impl IntelHex {
         Ok(())
     }
 
-    /// Creates IntelHex struct instance and fills it with data from provided hex file.
+    /// Creates `IntelHex` struct instance and fills it with data from provided hex file.
     ///
     /// # Example
     /// ```
@@ -157,12 +158,12 @@ impl IntelHex {
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// ```
     pub fn from_hex<P: AsRef<Path>>(filepath: P) -> Result<Self, Box<dyn Error>> {
-        let mut ih = IntelHex::new();
+        let mut ih = Self::new();
         ih.load_hex(filepath)?;
         Ok(ih)
     }
 
-    /// Fills the IntelHex struct instance with data from provided hex file.
+    /// Fills the `IntelHex` struct instance with data from provided hex file.
     ///
     /// # Example
     /// ```
@@ -189,7 +190,7 @@ impl IntelHex {
         Ok(())
     }
 
-    /// Creates IntelHex struct instance and fills it with data from provided binary.
+    /// Creates `IntelHex` instance and fills it with data from provided binary.
     ///
     /// # Example
     /// ```
@@ -202,12 +203,12 @@ impl IntelHex {
         filepath: P,
         base_address: usize,
     ) -> Result<Self, Box<dyn Error>> {
-        let mut ih = IntelHex::new();
+        let mut ih = Self::new();
         ih.load_bin(filepath, base_address)?;
         Ok(ih)
     }
 
-    /// Fills the IntelHex struct instance with data from provided binary.
+    /// Fills the `IntelHex` struct instance with data from provided binary.
     ///
     /// # Example
     /// ```
@@ -272,7 +273,7 @@ impl IntelHex {
             let rtype = self.start_addr.rtype.unwrap();
             let data = &self.start_addr.bytes.unwrap();
             let record = Record::create(0, rtype, data)?;
-            writeln!(writer, "{}", record)?;
+            writeln!(writer, "{record}")?;
         }
 
         let mut curr_high_addr = 0;
@@ -297,7 +298,7 @@ impl IntelHex {
                 let (msb, lsb) = (high_addr / 256, high_addr % 256);
                 let bin: Vec<u8> = vec![msb as u8, lsb as u8];
                 let record = Record::create(0, RecordType::ExtendedLinearAddress, &bin)?;
-                writeln!(writer, "{}", record)?;
+                writeln!(writer, "{record}")?;
 
                 // Update segment's current address
                 curr_high_addr = high_addr;
@@ -313,8 +314,12 @@ impl IntelHex {
                 && ((*addr != prev + 1) || chunk_data.len() >= self.max_payload_size)
             {
                 // Write data record
-                let record = Record::create(chunk_start.unwrap(), RecordType::Data, &chunk_data)?;
-                writeln!(writer, "{}", record)?;
+                let record = Record::create(
+                    chunk_start.unwrap_or_default(),
+                    RecordType::Data,
+                    &chunk_data,
+                )?;
+                writeln!(writer, "{record}")?;
 
                 // Clean up
                 chunk_data.clear();
@@ -334,16 +339,21 @@ impl IntelHex {
         }
 
         // Flush last data chunk
-        let record = Record::create(chunk_start.unwrap(), RecordType::Data, &chunk_data)?;
+        let record = Record::create(
+            chunk_start.unwrap_or_default(),
+            RecordType::Data,
+            &chunk_data,
+        )?;
         writeln!(writer, "{}", record)?;
 
         // Write EOF record
         let record = Record::create(0, RecordType::EndOfFile, &[])?;
-        write!(writer, "{}", record)?; // writes a line (no newline)
+        write!(writer, "{record}")?; // writes a line (no newline)
 
         Ok(())
     }
 
+    /// TODO:
     pub fn write_bin<P: AsRef<Path>>(&mut self, filepath: P) -> Result<(), Box<dyn Error>> {
         // Ensure the parent directory exists
         if let Some(parent) = filepath.as_ref().parent() {
@@ -362,7 +372,7 @@ impl IntelHex {
         let start = self.get_min_addr().unwrap_or(0);
         let mut current_addr = start;
 
-        for (addr, byte) in self.buffer.iter() {
+        for (addr, byte) in &self.buffer {
             // Fill gaps
             while current_addr < *addr {
                 writer.write_all(&[0x00])?;
@@ -377,21 +387,21 @@ impl IntelHex {
         Ok(())
     }
 
-    /// Get copy of the data buffer as BTreeMap from IntelHex.
-    ///
-    /// # Example
-    /// ```
-    /// use std::collections::BTreeMap;
-    /// use intelhex::IntelHex;
-    ///
-    /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
-    /// let addr_byte_map: BTreeMap<usize, u8> = ih.to_btree_map();
-    /// ```
-    pub fn to_btree_map(&self) -> BTreeMap<usize, u8> {
-        self.buffer.clone()
-    }
+    // /// Get copy of the data buffer as BTreeMap from IntelHex.
+    // ///
+    // /// # Example
+    // /// ```
+    // /// use std::collections::BTreeMap;
+    // /// use intelhex::IntelHex;
+    // ///
+    // /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
+    // /// let addr_byte_map: BTreeMap<usize, u8> = ih.to_btree_map();
+    // /// ```
+    // pub fn to_btree_map(&self) -> BTreeMap<usize, u8> {
+    //     self.buffer.clone()
+    // }
 
-    /// Get an iterator over (address, byte) pairs in the BTreeMap buffer of the `IntelHex`.
+    /// Get an iterator over (address, byte) pairs in the `BTreeMap` buffer of the `IntelHex`.
     ///
     /// # Example
     /// ```
@@ -417,6 +427,7 @@ impl IntelHex {
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let min_addr: Option<usize> = ih.get_min_addr();
     /// ```
+    #[must_use]
     pub fn get_min_addr(&self) -> Option<usize> {
         self.buffer.first_key_value().map(|(key, _)| *key)
     }
@@ -430,11 +441,12 @@ impl IntelHex {
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let max_addr: Option<usize> = ih.get_max_addr();
     /// ```
+    #[must_use]
     pub fn get_max_addr(&self) -> Option<usize> {
         self.buffer.last_key_value().map(|(key, _)| *key)
     }
 
-    /// Get byte from IntelHex at the provided address.
+    /// Get byte from `IntelHex` at the provided address.
     ///
     /// # Example
     /// ```
@@ -443,11 +455,12 @@ impl IntelHex {
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let b: u8 = ih.get_byte(0x0).unwrap();
     /// ```
+    #[must_use]
     pub fn get_byte(&self, address: usize) -> Option<u8> {
         self.buffer.get(&address).copied()
     }
 
-    /// Get an array of bytes from IntelHex at provided addresses.
+    /// Get an array of bytes from `IntelHex` at provided addresses.
     ///
     /// # Example
     /// ```
@@ -456,6 +469,7 @@ impl IntelHex {
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let b: Vec<u8> = ih.get_buffer_slice(&[0x0, 0x1, 0x2]).unwrap();
     /// ```
+    #[must_use]
     pub fn get_buffer_slice(&self, addr_vec: &[usize]) -> Option<Vec<u8>> {
         let mut out = Vec::with_capacity(addr_vec.len());
         for addr in addr_vec {
@@ -468,7 +482,8 @@ impl IntelHex {
         Some(out)
     }
 
-    /// Update byte in IntelHex at provided address.
+    #[allow(clippy::option_if_let_else)]
+    /// Update byte in `IntelHex` at provided address.
     ///
     /// # Example
     /// ```
@@ -489,7 +504,7 @@ impl IntelHex {
         }
     }
 
-    /// Update the array of bytes in IntelHex at provided addresses.
+    /// Update the array of bytes in `IntelHex` at provided addresses.
     ///
     /// # Example
     /// ```
@@ -515,7 +530,7 @@ impl IntelHex {
         Ok(())
     }
 
-    /// Update the max payload size (number of bytes) per record when writing IntelHex file.
+    /// Update the max payload size (number of bytes) per record when writing `IntelHex` file.
     /// Default = 16.
     ///
     /// # Example
@@ -526,7 +541,7 @@ impl IntelHex {
     /// ih.set_max_payload_size(0xFF);      // set to u8 max
     /// ih.write_hex("build/ex2/ih.hex");   // now data records can have up to 255 bytes of payload
     /// ```
-    pub fn set_max_payload_size(&mut self, size: u8) -> Result<(), IntelHexError> {
+    pub const fn set_max_payload_size(&mut self, size: u8) -> Result<(), IntelHexError> {
         if size == 0 {
             return Err(IntelHexError::SetterError(
                 IntelHexErrorKind::RecordInvalidPayloadLength,
@@ -536,15 +551,12 @@ impl IntelHex {
         Ok(())
     }
 
-    // TODO
+    // TODO: improve - set max addr
     pub fn relocate(&mut self, new_start_address: usize) -> Result<(), IntelHexError> {
-        let min_addr = match self.get_min_addr() {
-            Some(val) => val,
-            None => {
-                return Err(IntelHexError::SetterError(
-                    IntelHexErrorKind::InvalidAddress(0),
-                ));
-            }
+        let Some(min_addr) = self.get_min_addr() else {
+            return Err(IntelHexError::SetterError(
+                IntelHexErrorKind::InvalidAddress(0),
+            ));
         };
 
         let offset = new_start_address as isize - min_addr as isize;

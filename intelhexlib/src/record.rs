@@ -1,8 +1,9 @@
-//! The 'record' module defines the ['Record'] and ['RecordType'] which are used for parsing
+//! The `record` module defines the `Record` and `RecordType` which are used for parsing
 //! (and generating) Intel HEX records.
 
 use crate::IntelHexError;
 use crate::error::IntelHexErrorKind;
+use std::fmt::Write;
 use std::ops::Add;
 
 mod ranges {
@@ -43,7 +44,7 @@ impl RecordType {
 }
 
 #[derive(Debug, PartialEq)]
-pub(crate) struct Record {
+pub struct Record {
     pub(crate) length: u8,
     pub(crate) address: u16,
     pub(crate) rtype: RecordType,
@@ -52,6 +53,7 @@ pub(crate) struct Record {
 }
 
 impl Record {
+    #[allow(clippy::cast_possible_truncation)]
     /// Calculate checksum from the Record instance.
     ///
     pub(crate) fn calculate_checksum_from_self(&self) -> u8 {
@@ -80,6 +82,7 @@ impl Record {
         (!sum).wrapping_add(1) // two's complement
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     /// Create the record string from address, type and data vector.
     ///
     pub(crate) fn create(
@@ -89,6 +92,13 @@ impl Record {
     ) -> Result<String, IntelHexError> {
         // Get length of payload data
         let length = data.len();
+
+        // Check for length
+        if length > u8::MAX as usize {
+            return Err(IntelHexError::CreateRecordError(
+                IntelHexErrorKind::RecordTooLong,
+            ));
+        }
 
         // Create a vector of data for checksum calculation
         let mut v = vec![
@@ -104,21 +114,16 @@ impl Record {
 
         match rtype {
             RecordType::Data => {
-                // Check for data length
-                if length > u8::MAX as usize {
-                    return Err(IntelHexError::CreateRecordError(
-                        IntelHexErrorKind::RecordTooLong,
-                    ));
-                }
-
                 // Create record string
                 let record = format!(
                     ":{:02X}{:04X}00{}{:02X}",
                     length,
                     address,
                     data.iter()
-                        .map(|b| format!("{:02X}", b))
-                        .collect::<String>(),
+                        .fold(String::with_capacity(data.len() * 2), |mut buffer, b| {
+                            let _ = write!(buffer, "{b:02X}");
+                            buffer
+                        }),
                     checksum
                 );
 
@@ -147,8 +152,10 @@ impl Record {
                     address,
                     rtype as u8,
                     data.iter()
-                        .map(|b| format!("{:02X}", b))
-                        .collect::<String>(),
+                        .fold(String::with_capacity(data.len() * 2), |mut buffer, b| {
+                            let _ = write!(buffer, "{b:02X}");
+                            buffer
+                        }),
                     checksum
                 );
 
@@ -176,8 +183,10 @@ impl Record {
                     address,
                     rtype as u8,
                     data.iter()
-                        .map(|b| format!("{:02X}", b))
-                        .collect::<String>(),
+                        .fold(String::with_capacity(data.len() * 2), |mut buffer, b| {
+                            let _ = write!(buffer, "{b:02X}");
+                            buffer
+                        }),
                     checksum
                 );
 
@@ -215,7 +224,8 @@ impl Record {
         }
 
         // Get record length
-        let length = u8::from_str_radix(&line[ranges::RECORD_LEN_RANGE], 16).unwrap(); // as hexdigit check is done above - assume safe unwrap
+        // UNWRAP: safe as sanity check on ascii hexdigits has been performed above -> no handling needed
+        let length = u8::from_str_radix(&line[ranges::RECORD_LEN_RANGE], 16).unwrap_or_default();
 
         // Check if record end is bigger than the record length itself
         let data_end = ranges::RECORD_TYPE_RANGE.end + sizes::BYTE_CHAR_LEN * length as usize;
@@ -228,7 +238,8 @@ impl Record {
         let rtype = RecordType::parse(&line[ranges::RECORD_TYPE_RANGE])?;
 
         // Get record address
-        let address = u16::from_str_radix(&line[ranges::RECORD_ADDR_RANGE], 16).unwrap(); // as hexdigit check is done above - assume safe unwrap
+        // UNWRAP: safe as sanity check on ascii hexdigits has been performed above -> no handling needed
+        let address = u16::from_str_radix(&line[ranges::RECORD_ADDR_RANGE], 16).unwrap_or_default();
 
         // More sanity checks (for length and address)
         match rtype {
@@ -259,7 +270,7 @@ impl Record {
                     ));
                 }
             }
-            _ => {}
+            RecordType::Data => {}
         }
         if !matches!(rtype, RecordType::Data) && address != 0 {
             return Err(IntelHexErrorKind::RecordAddressInvalidForType(
@@ -272,22 +283,25 @@ impl Record {
         // Get record data payload
         let mut data: Vec<u8> = Vec::with_capacity(length as usize);
         for i in (ranges::RECORD_TYPE_RANGE.end..data_end).step_by(sizes::BYTE_CHAR_LEN) {
-            let byte = u8::from_str_radix(&line[i..i + sizes::BYTE_CHAR_LEN], 16).unwrap();
+            // UNWRAP: safe as sanity check on ascii hexdigits has been performed above -> no handling needed
+            let byte =
+                u8::from_str_radix(&line[i..i + sizes::BYTE_CHAR_LEN], 16).unwrap_or_default();
             data.push(byte);
         }
 
         // Get checksum
-        let checksum = u8::from_str_radix(&line[data_end..record_end], 16).unwrap();
+        // UNWRAP: safe as sanity check on ascii hexdigits has been performed above -> no handling needed
+        let checksum = u8::from_str_radix(&line[data_end..record_end], 16).unwrap_or_default();
 
-        // Validate checksum
-        let _self = Self {
+        // Construct record instance and validate checksum
+        let record = Self {
             length,
             address,
             rtype,
             data,
             checksum,
         };
-        let calc_checksum = Self::calculate_checksum_from_self(&_self);
+        let calc_checksum = Self::calculate_checksum_from_self(&record);
         if calc_checksum != checksum {
             return Err(IntelHexErrorKind::RecordChecksumMismatch(
                 calc_checksum,
@@ -295,7 +309,7 @@ impl Record {
             ));
         }
 
-        Ok(_self)
+        Ok(record)
     }
 }
 

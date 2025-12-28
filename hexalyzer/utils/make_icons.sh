@@ -20,4 +20,8 @@ iconutil -c icns "$DOCS_DIR/icon.iconset"
 
 # --- Prep icon for MacOS doc
 
-magick "$DOCS_DIR/icon_128x128.png" "$DOCS_DIR/icon.rgba"
+magick "$DOCS_DIR/doc_icon_128x128.png" "$DOCS_DIR/icon.rgba"
+
+
+# NOTE: cd into hexalyzer and do the app release:
+# cargo bundle --release

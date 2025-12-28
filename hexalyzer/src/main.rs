@@ -73,7 +73,7 @@ impl eframe::App for HexViewerApp {
 }
 
 fn load_icon() -> egui::IconData {
-    const ICON_RGBA: &[u8] = include_bytes!("../docs/icon.rgba");
+    const ICON_RGBA: &[u8] = include_bytes!("../assets/icon.rgba");
 
     egui::IconData {
         rgba: ICON_RGBA.to_vec(),

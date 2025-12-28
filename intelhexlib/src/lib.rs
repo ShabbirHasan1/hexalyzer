@@ -1,6 +1,6 @@
-//! # Intelhex
+//! # IntelHex Library
 //!
-//! `intelhex` is a Rust library for parsing, validating, and working with Intel HEX files.
+//! `intelhexlib` is a Rust library for parsing, validating, and working with Intel HEX files.
 //!
 //! The library provides:
 //! - Parser for Intel HEX files (via [`IntelHex`] struct).
