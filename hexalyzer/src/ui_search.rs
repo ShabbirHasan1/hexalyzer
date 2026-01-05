@@ -2,17 +2,27 @@ use crate::app::HexViewerApp;
 use eframe::egui;
 use std::collections::btree_map;
 
+#[derive(Default, PartialEq, Clone)]
+struct SearchState {
+    input: String,
+    is_ascii: bool,
+}
+
 #[derive(Default)]
 pub struct Search {
-    pub(crate) has_focus: bool,
     pub(crate) addr: Option<usize>,
     pub(crate) results: Vec<usize>,
     pub(crate) length: usize,
-    input: String,
-    last_input: String,
+    pub(crate) has_focus: bool,
     idx: usize,
+
+    // UI control flags
     force: bool,
     loose_focus: bool,
+
+    // Input states
+    current: SearchState,
+    last: SearchState,
 }
 
 impl Search {
@@ -21,15 +31,15 @@ impl Search {
         self.addr = None;
         self.results.clear();
         self.length = 0;
-        // self.input.clear(); -> do not clear to preserve text box content
-        self.last_input.clear();
+        // Do not clear current to preserve text box content
+        self.last = SearchState::default();
         self.idx = 0;
         self.force = false;
     }
 
     pub(crate) fn redo(&mut self) {
-        // In case current input field is not valid
-        self.input = self.last_input.clone();
+        // In case the current input field is not valid
+        self.current = self.last.clone();
 
         // Clear
         self.clear();
@@ -46,8 +56,17 @@ impl Search {
 impl HexViewerApp {
     /// Show contents of search menu
     pub(crate) fn show_search_contents(&mut self, ui: &mut egui::Ui) {
+        // RadioButtons to select between byte and ascii search
+        ui.horizontal(|ui| {
+            ui.radio_value(&mut self.search.current.is_ascii, false, "hex");
+            ui.add_space(5.0);
+            ui.radio_value(&mut self.search.current.is_ascii, true, "ascii");
+        });
+
+        ui.add_space(3.0);
+
         let textedit = ui.add(
-            egui::TextEdit::singleline(&mut self.search.input)
+            egui::TextEdit::singleline(&mut self.search.current.input)
                 .desired_width(ui.available_width() - 30.0),
         );
 
@@ -67,34 +86,25 @@ impl HexViewerApp {
 
         if (self.events.enter_released && self.search.has_focus) || self.search.force {
             // Same input -> move to next result, otherwise -> search again
-            if self.search.input == self.search.last_input {
+            if self.search.current == self.search.last {
                 if !self.search.results.is_empty() {
                     self.search.idx = (self.search.idx + 1) % self.search.results.len();
                 }
             } else {
-                let input = self.search.input.as_str();
-
-                // Parse str hex representation into Vec<u8>
-                let pattern: Option<Vec<u8>> = if input.len().is_multiple_of(2) {
-                    (0..input.len())
-                        .step_by(2)
-                        .map(|i| u8::from_str_radix(&input[i..i + 2], 16).ok())
-                        .collect()
-                } else {
-                    None
-                };
+                let input = self.search.current.input.as_str();
+                let is_ascii = self.search.current.is_ascii;
 
                 // If pattern valid -> search, otherwise -> clear results
-                if let Some(p) = pattern {
-                    self.search.results = search_bmh(self.ih.iter(), &p);
-                    self.search.length = p.len();
+                if let Some(pattern) = parse_str_into_bytes(input, is_ascii) {
+                    self.search.results = search_bmh(self.ih.iter(), &pattern);
+                    self.search.length = pattern.len();
                 } else {
                     self.search.results.clear();
                 }
 
                 // Reset the state of search
                 self.search.idx = 0;
-                self.search.last_input = self.search.input.clone();
+                self.search.last = self.search.current.clone();
             }
 
             // Set address to scroll to (only if not forced)
@@ -177,4 +187,19 @@ fn search_bmh(map_iter: btree_map::Iter<usize, u8>, pattern: &[u8]) -> Vec<usize
     }
 
     results
+}
+
+fn parse_str_into_bytes(s: &str, is_ascii_repr: bool) -> Option<Vec<u8>> {
+    if is_ascii_repr {
+        return Some(s.as_bytes().to_vec());
+    }
+
+    if s.len().is_multiple_of(2) {
+        (0..s.len())
+            .step_by(2)
+            .map(|i| u8::from_str_radix(&s[i..i + 2], 16).ok())
+            .collect()
+    } else {
+        None
+    }
 }

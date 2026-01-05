@@ -49,7 +49,7 @@ impl HexViewerApp {
                             let format = format_from_extension(&path).unwrap_or(SaveFormat::Bin);
 
                             let res: Result<(), Box<dyn Error>> = match format {
-                                SaveFormat::Bin => self.ih.write_bin(path),
+                                SaveFormat::Bin => self.ih.write_bin(path, 0x00),
                                 SaveFormat::Hex => self.ih.write_hex(path),
                             };
                             if let Err(msg) = res {
