@@ -43,7 +43,7 @@ impl RecordType {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Record {
     pub(crate) length: u8,
     pub(crate) address: u16,
@@ -224,7 +224,7 @@ impl Record {
         }
 
         // Get record length
-        // UNWRAP: safe as sanity check on ascii hexdigits has been performed above -> no handling needed
+        // UNWRAP: not handled as sanity check on ascii hex digits has been performed above
         let length = u8::from_str_radix(&line[ranges::RECORD_LEN_RANGE], 16).unwrap_or_default();
 
         // Check if record end is bigger than the record length itself
@@ -238,7 +238,7 @@ impl Record {
         let rtype = RecordType::parse(&line[ranges::RECORD_TYPE_RANGE])?;
 
         // Get record address
-        // UNWRAP: safe as sanity check on ascii hexdigits has been performed above -> no handling needed
+        // UNWRAP: not handled as sanity check on ascii hex digits has been performed above
         let address = u16::from_str_radix(&line[ranges::RECORD_ADDR_RANGE], 16).unwrap_or_default();
 
         // More sanity checks (for length and address)
@@ -283,14 +283,14 @@ impl Record {
         // Get record data payload
         let mut data: Vec<u8> = Vec::with_capacity(length as usize);
         for i in (ranges::RECORD_TYPE_RANGE.end..data_end).step_by(sizes::BYTE_CHAR_LEN) {
-            // UNWRAP: safe as sanity check on ascii hexdigits has been performed above -> no handling needed
+            // UNWRAP: not handled as sanity check on ascii hex digits has been performed above
             let byte =
                 u8::from_str_radix(&line[i..i + sizes::BYTE_CHAR_LEN], 16).unwrap_or_default();
             data.push(byte);
         }
 
         // Get checksum
-        // UNWRAP: safe as sanity check on ascii hexdigits has been performed above -> no handling needed
+        // UNWRAP: not handled as sanity check on ascii hex digits has been performed above
         let checksum = u8::from_str_radix(&line[data_end..record_end], 16).unwrap_or_default();
 
         // Construct record instance and validate checksum

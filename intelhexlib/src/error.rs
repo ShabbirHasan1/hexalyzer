@@ -1,5 +1,5 @@
 //! The `error` module defines the [`IntelHexError`] struct that describes the errors that
-//! can occur when parsing Intel HEX files via [`IntelHex`].
+//! can occur when parsing, updating, or writing Intel HEX files via [`IntelHex`].
 //! It contains the three pieces of information:
 //! 1. When the error occurs, e.g., during parsing or creating the record.
 //! 2. What kind of error was encountered (via [`IntelHexErrorKind`] struct).
@@ -13,7 +13,7 @@ use std::fmt;
 pub enum IntelHexError {
     ParseRecordError(IntelHexErrorKind, usize),
     CreateRecordError(IntelHexErrorKind),
-    SetterError(IntelHexErrorKind),
+    UpdateError(IntelHexErrorKind),
 }
 
 impl fmt::Display for IntelHexError {
@@ -31,10 +31,10 @@ impl fmt::Display for IntelHexError {
                     "Error encountered during creation of hex record:\n{base_err}",
                 )
             }
-            Self::SetterError(base_err) => {
+            Self::UpdateError(base_err) => {
                 write!(
                     f,
-                    "Error encountered during setting private field of IntelHex struct:\n{base_err}",
+                    "Error encountered during update of IntelHex struct instance:\n{base_err}",
                 )
             }
         }
@@ -71,6 +71,8 @@ pub enum IntelHexErrorKind {
     InvalidAddress(usize),
     /// Encountered second start address record
     DuplicateStartAddress,
+    /// IntelHex instance has no data
+    IntelHexInstanceEmpty,
 }
 
 impl fmt::Display for IntelHexErrorKind {
@@ -126,6 +128,9 @@ impl fmt::Display for IntelHexErrorKind {
             }
             Self::DuplicateStartAddress => {
                 write!(f, "Encountered second start address record")
+            }
+            Self::IntelHexInstanceEmpty => {
+                write!(f, "IntelHex instance has no data")
             }
         }
     }

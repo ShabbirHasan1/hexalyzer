@@ -1,5 +1,10 @@
-//! The `intelhex` module defines the [`IntelHex`] struct which provides APIs for
-//! loading, modifying and writing Intel HEX files.
+//! The `intelhex` module provides the [`IntelHex`] struct, a high-level API for
+//! managing Intel HEX data.
+//!
+//! It supports parsing HEX files into an internal sparse memory representation using
+//! a `BTreeMap`, allowing for efficient manipulation of non-contiguous data blocks.
+//! The module also provides utilities for binary file interop, memory relocation,
+//! and generating valid Intel HEX output with configurable record sizes.
 
 use crate::error::{IntelHexError, IntelHexErrorKind};
 use crate::record::{Record, RecordType};
@@ -9,32 +14,18 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 
 #[derive(Debug, Clone)]
-pub struct StartAddress {
-    /// Type of the start address
-    pub rtype: Option<RecordType>,
-    /// Data bytes (the address itself stored as byte array)
-    pub bytes: Option<[u8; 4]>,
-}
-
-impl StartAddress {
-    pub const fn new(rtype: RecordType, bytes: [u8; 4]) -> Self {
-        Self {
-            rtype: Some(rtype),
-            bytes: Some(bytes),
-        }
-    }
-    pub const fn is_empty(&self) -> bool {
-        self.rtype.is_none() && self.bytes.is_none()
-    }
-}
-
-#[derive(Debug, Clone)]
 pub struct IntelHex {
+    /// Intel HEX file path
     pub filepath: PathBuf,
+    /// Intel HEX file size in bytes
     pub size: usize,
-    pub start_addr: StartAddress,
+    /// Start address of the Intel HEX file
+    pub start_addr: String,
+    /// Maximum payload size for data records
     max_payload_size: usize,
+    /// Offset of the linear address segment
     offset: usize,
+    /// Data buffer of the Intel HEX file
     buffer: BTreeMap<usize, u8>,
 }
 
@@ -44,14 +35,23 @@ impl Default for IntelHex {
     }
 }
 
+impl<'a> IntoIterator for &'a IntelHex {
+    type Item = (&'a usize, &'a u8);
+    type IntoIter = std::collections::btree_map::Iter<'a, usize, u8>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.buffer.iter()
+    }
+}
+
 impl IntelHex {
     /// Creates empty `IntelHex` struct instance.
     ///
     /// # Examples
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let ih = IntelHex::new();
+    /// assert_eq!(ih.size, 0);
     /// ```
     #[must_use]
     pub const fn new() -> Self {
@@ -60,10 +60,7 @@ impl IntelHex {
             size: 0,
             offset: 0,
             max_payload_size: 16,
-            start_addr: StartAddress {
-                rtype: None,
-                bytes: None,
-            },
+            start_addr: String::new(),
             buffer: BTreeMap::new(),
         }
     }
@@ -72,18 +69,18 @@ impl IntelHex {
     ///
     /// # Examples
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
+    /// assert_ne!(ih.size, 0);
+    ///
     /// ih.clear();
+    /// assert_eq!(ih.size, 0);
     /// ```
     pub fn clear(&mut self) {
         self.filepath.clear();
         self.size = 0;
-        self.start_addr = StartAddress {
-            rtype: None,
-            bytes: None,
-        };
+        self.start_addr = String::new();
         self.offset = 0;
         self.buffer.clear();
     }
@@ -94,21 +91,8 @@ impl IntelHex {
         // Iterate over lines of records
         for (i, line) in raw_contents.lines().enumerate() {
             // Parse the record
-            let record = match Record::parse(line) {
-                Ok(rec) => rec,
-                Err(err) => {
-                    return Err(IntelHexError::ParseRecordError(err, i + 1));
-                }
-            };
-
-            // Validate checksum of the record (TODO: remove as already checked inside Record)
-            let expected_checksum = Record::calculate_checksum_from_self(&record);
-            if record.checksum != expected_checksum {
-                return Err(IntelHexError::ParseRecordError(
-                    IntelHexErrorKind::RecordChecksumMismatch(expected_checksum, record.checksum),
-                    i + 1,
-                ));
-            }
+            let record =
+                Record::parse(line).map_err(|err| IntelHexError::ParseRecordError(err, i + 1))?;
 
             // Fill in self
             match record.rtype {
@@ -125,7 +109,7 @@ impl IntelHex {
                         addr += 1;
                     }
                 }
-                RecordType::EndOfFile => {} // TODO: has to have EOF record
+                RecordType::EndOfFile => {} // TODO: hex has to end with EOF record
                 RecordType::ExtendedSegmentAddress => {
                     self.offset = (record.data[0] as usize * 256 + record.data[1] as usize) * 16;
                 }
@@ -139,23 +123,26 @@ impl IntelHex {
                             i + 1,
                         ));
                     }
-                    self.start_addr.rtype = Some(record.rtype);
-                    // Sanity checking is done during record parsing, thus directly
-                    // putting Vec data into byte array
-                    self.start_addr.bytes = Some(record.data.try_into().unwrap());
+                    // Directly store the record string
+                    // TODO: split legacy and modern way of specifying start address?
+                    self.start_addr = line.to_string();
                 }
             }
         }
         Ok(())
     }
 
-    /// Creates `IntelHex` struct instance and fills it with data from provided hex file.
+    /// Creates an `IntelHex` instance and fills it with data from the provided hex file.
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or parsed.
     ///
     /// # Example
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
+    /// assert_eq!(ih.size, 239);
     /// ```
     pub fn from_hex<P: AsRef<Path>>(filepath: P) -> Result<Self, Box<dyn Error>> {
         let mut ih = Self::new();
@@ -163,14 +150,19 @@ impl IntelHex {
         Ok(ih)
     }
 
-    /// Fills the `IntelHex` struct instance with data from provided hex file.
+    /// Fills an `IntelHex` instance with data from the provided hex file.
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or parsed.
     ///
     /// # Example
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let mut ih = IntelHex::new();
     /// ih.load_hex("tests/fixtures/ih_valid_1.hex").unwrap();
+    ///
+    /// assert_eq!(ih.size, 239);
     /// ```
     pub fn load_hex<P: AsRef<Path>>(&mut self, filepath: P) -> Result<(), Box<dyn Error>> {
         // Read contents of the file
@@ -190,14 +182,19 @@ impl IntelHex {
         Ok(())
     }
 
-    /// Creates `IntelHex` instance and fills it with data from provided binary.
+    /// Creates an `IntelHex` instance and fills it with data from the provided binary.
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or parsed.
     ///
     /// # Example
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let base_addr = 0x1000;
     /// let ih = IntelHex::from_bin("tests/fixtures/ih_valid_1.bin", base_addr).unwrap();
+    ///
+    /// assert_eq!(ih.size, 51596);
     /// ```
     pub fn from_bin<P: AsRef<Path>>(
         filepath: P,
@@ -208,15 +205,20 @@ impl IntelHex {
         Ok(ih)
     }
 
-    /// Fills the `IntelHex` struct instance with data from provided binary.
+    /// Fills an `IntelHex` instance with data from the provided binary.
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be read or parsed.
     ///
     /// # Example
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let mut ih = IntelHex::new();
     /// let base_addr = 0x1000;
     /// ih.load_bin("tests/fixtures/ih_valid_1.bin", base_addr).unwrap();
+    ///
+    /// assert_eq!(ih.size, 51596);
     /// ```
     pub fn load_bin<P: AsRef<Path>>(
         &mut self,
@@ -236,20 +238,28 @@ impl IntelHex {
         self.filepath = filepath.as_ref().to_path_buf();
 
         // Load data bytes into the map and return
-        for (i, byte) in data.iter().enumerate() {
-            self.buffer.insert(base_address + i, *byte);
-        }
+        self.buffer.extend(
+            data.into_iter()
+                .enumerate()
+                .map(|(i, byte)| (base_address + i, byte)),
+        );
         Ok(())
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     /// Generates an Intel HEX file at the specified path.
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be written.
     ///
     /// # Example
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// ih.write_hex("build/ex1/ih.hex");
+    ///
+    /// assert_eq!(ih.size, 239);
     /// ```
     pub fn write_hex<P: AsRef<Path>>(&mut self, filepath: P) -> Result<(), Box<dyn Error>> {
         // Ensure the parent directory exists
@@ -269,11 +279,7 @@ impl IntelHex {
         // Write start address record
         // TODO: place it - start or end of file?
         if !self.start_addr.is_empty() {
-            // Sanity checks were done beforehand, assume it is safe to unwrap
-            let rtype = self.start_addr.rtype.unwrap();
-            let data = &self.start_addr.bytes.unwrap();
-            let record = Record::create(0, rtype, data)?;
-            writeln!(writer, "{record}")?;
+            writeln!(writer, "{}", self.start_addr)?;
         }
 
         let mut curr_high_addr = 0;
@@ -292,12 +298,12 @@ impl IntelHex {
             {
                 // Write data record
                 let record = Record::create(start, RecordType::Data, &chunk_data)?;
-                writeln!(writer, "{}", record)?;
+                writeln!(writer, "{record}")?;
 
                 // Write ELA record
-                let (msb, lsb) = (high_addr / 256, high_addr % 256);
-                let bin: Vec<u8> = vec![msb as u8, lsb as u8];
-                let record = Record::create(0, RecordType::ExtendedLinearAddress, &bin)?;
+                let msb = (high_addr >> 8) as u8;
+                let lsb = (high_addr & 0xFF) as u8;
+                let record = Record::create(0, RecordType::ExtendedLinearAddress, &[msb, lsb])?;
                 writeln!(writer, "{record}")?;
 
                 // Update segment's current address
@@ -344,7 +350,7 @@ impl IntelHex {
             RecordType::Data,
             &chunk_data,
         )?;
-        writeln!(writer, "{}", record)?;
+        writeln!(writer, "{record}")?;
 
         // Write EOF record
         let record = Record::create(0, RecordType::EndOfFile, &[])?;
@@ -353,8 +359,24 @@ impl IntelHex {
         Ok(())
     }
 
-    /// TODO:
-    pub fn write_bin<P: AsRef<Path>>(&mut self, filepath: P) -> Result<(), Box<dyn Error>> {
+    /// Generates a binary file at the specified path.
+    /// Address gaps are filled with the provided `gap_fill` byte (usually 0x00 or 0xFF).
+    ///
+    /// # Errors
+    /// Returns an error if the file cannot be written.
+    ///
+    /// # Example
+    /// ```
+    /// use intelhexlib::IntelHex;
+    ///
+    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
+    /// ih.write_bin("build/ex3/ih.bin", 0x00);
+    ///
+    /// assert_eq!(ih.size, 239);
+    /// // Due to address gaps, the written bin file size is large
+    /// assert_eq!(std::fs::metadata("build/ex3/ih.bin").unwrap().len(), 115264);
+    /// ```
+    pub fn write_bin<P: AsRef<Path>>(&mut self, filepath: P, gap_fill: u8) -> Result<(), Box<dyn Error>> {
         // Ensure the parent directory exists
         if let Some(parent) = filepath.as_ref().parent() {
             std::fs::create_dir_all(parent)?;
@@ -375,7 +397,7 @@ impl IntelHex {
         for (addr, byte) in &self.buffer {
             // Fill gaps
             while current_addr < *addr {
-                writer.write_all(&[0x00])?;
+                writer.write_all(&[gap_fill])?;
                 current_addr += 1;
             }
 
@@ -387,45 +409,51 @@ impl IntelHex {
         Ok(())
     }
 
-    // /// Get copy of the data buffer as BTreeMap from IntelHex.
-    // ///
-    // /// # Example
-    // /// ```
-    // /// use std::collections::BTreeMap;
-    // /// use intelhex::IntelHex;
-    // ///
-    // /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
-    // /// let addr_byte_map: BTreeMap<usize, u8> = ih.to_btree_map();
-    // /// ```
-    // pub fn to_btree_map(&self) -> BTreeMap<usize, u8> {
-    //     self.buffer.clone()
-    // }
+    /// Get copy of the data buffer as `BTreeMap` from `IntelHex`.
+    ///
+    /// # Example
+    /// ```
+    /// use std::collections::BTreeMap;
+    /// use intelhexlib::IntelHex;
+    ///
+    /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
+    /// let addr_byte_map: BTreeMap<usize, u8> = ih.to_btree_map();
+    ///
+    /// assert!(!addr_byte_map.is_empty());
+    /// ```
+    #[must_use]
+    pub fn to_btree_map(&self) -> BTreeMap<usize, u8> {
+        self.buffer.clone()
+    }
 
     /// Get an iterator over (address, byte) pairs in the `BTreeMap` buffer of the `IntelHex`.
     ///
     /// # Example
     /// ```
     /// use std::collections::{BTreeMap, btree_map};
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     ///
     /// let mut map_iter: btree_map::Iter<'_, usize, u8> = ih.iter();
     /// let (first_key, first_value) = map_iter.next().unwrap();
+    ///
     /// assert_eq!((*first_key, *first_value), (0, 250));
     /// ```
     pub fn iter(&self) -> std::collections::btree_map::Iter<'_, usize, u8> {
-        self.buffer.iter()
+        self.into_iter()
     }
 
     /// Get the smallest address present in the data buffer.
     ///
     /// # Example
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let min_addr: Option<usize> = ih.get_min_addr();
+    ///
+    /// assert_eq!(min_addr, Some(0));
     /// ```
     #[must_use]
     pub fn get_min_addr(&self) -> Option<usize> {
@@ -436,10 +464,12 @@ impl IntelHex {
     ///
     /// # Example
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let max_addr: Option<usize> = ih.get_max_addr();
+    ///
+    /// assert_eq!(max_addr, Some(0x1C23F));
     /// ```
     #[must_use]
     pub fn get_max_addr(&self) -> Option<usize> {
@@ -450,10 +480,12 @@ impl IntelHex {
     ///
     /// # Example
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
-    /// let b: u8 = ih.get_byte(0x0).unwrap();
+    /// let byte: u8 = ih.get_byte(0x0).unwrap();
+    ///
+    /// assert_eq!(byte, 250);
     /// ```
     #[must_use]
     pub fn get_byte(&self, address: usize) -> Option<u8> {
@@ -461,89 +493,109 @@ impl IntelHex {
     }
 
     /// Get an array of bytes from `IntelHex` at provided addresses.
+    /// Returns `None` if any of the addresses are invalid.
     ///
     /// # Example
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
-    /// let b: Vec<u8> = ih.get_buffer_slice(&[0x0, 0x1, 0x2]).unwrap();
+    /// let bytes: Vec<u8> = ih.get_buffer_slice(&[0x0, 0x1, 0x2]).unwrap();
+    ///
+    /// assert_eq!(bytes, &[250, 0, 0]);
     /// ```
     #[must_use]
     pub fn get_buffer_slice(&self, addr_vec: &[usize]) -> Option<Vec<u8>> {
-        let mut out = Vec::with_capacity(addr_vec.len());
-        for addr in addr_vec {
-            if let Some(&byte) = self.buffer.get(addr) {
-                out.push(byte);
-            } else {
-                return None; // invalid address
-            }
-        }
-        Some(out)
+        addr_vec
+            .iter()
+            .map(|addr| self.buffer.get(addr).copied())
+            .collect()
     }
 
     #[allow(clippy::option_if_let_else)]
     /// Update byte in `IntelHex` at provided address.
     ///
+    /// # Errors
+    /// Returns an error if the provided address is invalid.
+    ///
     /// # Example
     /// ```
-    /// use intelhex::{IntelHex, IntelHexError};
+    /// use intelhexlib::{IntelHex, IntelHexError};
     /// use std::io;
     ///
     /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let res: Result<(), IntelHexError> = ih.update_byte(0x0, 0xFF);
+    ///
+    /// assert!(res.is_ok());
     /// ```
     pub fn update_byte(&mut self, address: usize, value: u8) -> Result<(), IntelHexError> {
         if let Some(v) = self.buffer.get_mut(&address) {
             *v = value;
-            Ok(())
         } else {
-            Err(IntelHexError::SetterError(
+            return Err(IntelHexError::UpdateError(
                 IntelHexErrorKind::InvalidAddress(address),
-            ))
+            ));
         }
+
+        Ok(())
     }
 
     /// Update the array of bytes in `IntelHex` at provided addresses.
     ///
+    /// # Errors
+    /// Returns an error if any of the provided addresses are invalid.
+    ///
     /// # Example
     /// ```
-    /// use intelhex::{IntelHex, IntelHexError};
+    /// use intelhexlib::{IntelHex, IntelHexError};
     /// use std::io;
     ///
     /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let res: Result<(), IntelHexError> = ih.update_buffer_slice(&[(0x0, 0xFF), (0x1, 0xFF), (0x2, 0xFF)]);
+    ///
+    /// assert!(res.is_ok());
     /// ```
-    pub fn update_buffer_slice(
-        &mut self,
-        updates_map: &[(usize, u8)],
-    ) -> Result<(), IntelHexError> {
-        for &(addr, value) in updates_map {
-            if let Some(byte) = self.buffer.get_mut(&addr) {
-                *byte = value;
-            } else {
-                return Err(IntelHexError::SetterError(
+    pub fn update_buffer_slice(&mut self, update_map: &[(usize, u8)]) -> Result<(), IntelHexError> {
+        // Iteration 1 - check if all addresses are valid
+        for &(addr, _) in update_map {
+            if !self.buffer.contains_key(&addr) {
+                return Err(IntelHexError::UpdateError(
                     IntelHexErrorKind::InvalidAddress(addr),
                 ));
             }
         }
+
+        // Iteration 2 - update bytes
+        for &(addr, value) in update_map {
+            if let Some(byte) = self.buffer.get_mut(&addr) {
+                *byte = value;
+            }
+        }
+
         Ok(())
     }
 
     /// Update the max payload size (number of bytes) per record when writing `IntelHex` file.
     /// Default = 16.
     ///
+    /// # Errors
+    /// Returns an error if the provided payload size is 0.
+    ///
     /// # Example
     /// ```
-    /// use intelhex::IntelHex;
+    /// use intelhexlib::IntelHex;
     ///
     /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// ih.set_max_payload_size(0xFF);      // set to u8 max
     /// ih.write_hex("build/ex2/ih.hex");   // now data records can have up to 255 bytes of payload
+    ///
+    /// // Due to larger payload size, there are fewer records in the hex file.
+    /// // Hence, the size is smaller (originally = 239 bytes).
+    /// assert_eq!(std::fs::metadata("build/ex2/ih.hex").unwrap().len(), 187);
     /// ```
     pub const fn set_max_payload_size(&mut self, size: u8) -> Result<(), IntelHexError> {
         if size == 0 {
-            return Err(IntelHexError::SetterError(
+            return Err(IntelHexError::UpdateError(
                 IntelHexErrorKind::RecordInvalidPayloadLength,
             ));
         }
@@ -551,19 +603,43 @@ impl IntelHex {
         Ok(())
     }
 
-    // TODO: improve - set max addr
+    #[allow(
+        clippy::cast_possible_truncation,
+        clippy::cast_possible_wrap,
+        clippy::cast_sign_loss
+    )]
+    /// Relocate the entire data buffer to a new starting address.
+    ///
+    /// # Errors
+    /// Returns an error if the new starting address is out of bounds or
+    /// if the `IntelHex` instance has no data.
+    ///
+    /// # Example
+    /// ```
+    /// use intelhexlib::IntelHex;
+    ///
+    /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
+    /// ih.relocate(0x1234);
+    ///
+    /// assert_eq!(ih.get_byte(0), None);
+    /// assert_eq!(ih.get_byte(0x1234), Some(250));
+    /// ```
     pub fn relocate(&mut self, new_start_address: usize) -> Result<(), IntelHexError> {
-        let Some(min_addr) = self.get_min_addr() else {
-            return Err(IntelHexError::SetterError(
-                IntelHexErrorKind::InvalidAddress(0),
-            ));
-        };
+        let min_addr = self.get_min_addr().ok_or(IntelHexError::UpdateError(
+            IntelHexErrorKind::IntelHexInstanceEmpty,
+        ))?;
 
-        let offset = new_start_address as isize - min_addr as isize;
+        if new_start_address > u32::MAX as usize {
+            return Err(IntelHexError::UpdateError(
+                IntelHexErrorKind::InvalidAddress(new_start_address),
+            ));
+        }
+
+        let offset = (new_start_address as i64 - min_addr as i64) as isize;
 
         self.buffer = std::mem::take(&mut self.buffer)
             .into_iter()
-            .map(|(k, v)| ((k as isize + offset) as usize, v))
+            .map(|(addr, byte)| ((addr as isize + offset) as usize, byte))
             .collect();
 
         Ok(())

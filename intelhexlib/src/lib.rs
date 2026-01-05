@@ -1,4 +1,4 @@
-//! # IntelHex Library
+//! # `intelhexlib`
 //!
 //! `intelhexlib` is a Rust library for parsing, validating, and working with Intel HEX files.
 //!
@@ -10,7 +10,7 @@
 //! ## Example
 //!
 //! ```
-//! use intelhex::IntelHex;
+//! use intelhexlib::IntelHex;
 //!
 //! let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
 //! ih.write_hex("build/ex1/ih.hex");
@@ -22,5 +22,5 @@ mod record;
 
 // Public APIs
 pub use error::{IntelHexError, IntelHexErrorKind};
-pub use intelhex::{IntelHex, StartAddress};
+pub use intelhex::IntelHex;
 pub use record::RecordType;
