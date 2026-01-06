@@ -22,6 +22,7 @@ mod ui_popup;
 mod ui_scrollarea;
 mod ui_search;
 mod ui_sidepanel;
+mod ui_tabs;
 
 use crate::ui_popup::PopupType;
 use app::HexViewerApp;
@@ -55,20 +56,34 @@ impl eframe::App for HexViewerApp {
         self.show_menu_bar(ctx);
 
         // TODO: move this somewhere
-        if self.error.is_some() {
+        if self.error.borrow().is_some() {
             self.popup.active = true;
             self.popup.ptype = Some(PopupType::Error);
         }
 
         self.show_side_panel(ctx);
-
-        if self.popup.active {
-            self.show_popup(ctx);
-        } else {
-            self.show_central_panel(ctx);
-        }
+        self.show_tabs(ctx);
 
         self.handle_drag_and_drop(ctx);
+
+        // If pop active - show it and return (don't display the hex bytes)
+        if self.popup.active {
+            self.show_popup(ctx);
+            return;
+        }
+
+        // Show the content of the active session
+        if let Some(index) = self.active_index {
+            if let Some(curr_session) = self.sessions.get_mut(index) {
+                curr_session.show_central_panel(ctx, self.bytes_per_row);
+            }
+        } else {
+            egui::CentralPanel::default().show(ctx, |ui| {
+                ui.centered_and_justified(|ui| {
+                    ui.label("Drop a file or click '+' to start hexing!");
+                });
+            });
+        }
     }
 }
 
@@ -83,6 +98,10 @@ fn load_icon() -> egui::IconData {
 }
 
 // TODO for MVP:
+// If attach same file?
+// Redo / restore
+// ctrl + c?
+// Move bytes with arrows?
 // Verify export works OK
 // Polish up code
 // Add documentation

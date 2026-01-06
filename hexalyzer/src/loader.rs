@@ -1,4 +1,4 @@
-use crate::app::HexViewerApp;
+use crate::app::{HexSession, HexViewerApp};
 use intelhexlib::IntelHex;
 use std::fs::File;
 use std::io::Read;
@@ -41,12 +41,20 @@ fn detect_file_kind(path: &PathBuf) -> std::io::Result<FileKind> {
 
 impl HexViewerApp {
     pub(crate) fn load_file(&mut self, path: &PathBuf) {
+        // Prevent loading more files than allowed by the app settings
+        if self.sessions.len() >= self.max_tabs {
+            self.error
+                .borrow_mut()
+                .replace("Maximum number of tabs reached".into());
+            return;
+        }
+
         let mut ih = IntelHex::new();
 
         let file_type = match detect_file_kind(path) {
             Ok(kind) => kind,
             Err(err) => {
-                self.error = Some(err.to_string());
+                self.error.borrow_mut().replace(err.to_string());
                 return;
             }
         };
@@ -63,16 +71,39 @@ impl HexViewerApp {
         };
 
         if let Err(msg) = res {
-            self.error = Some(msg.to_string());
+            self.error.borrow_mut().replace(msg.to_string());
+            return;
+        }
+
+        let mut new_session = HexSession {
+            name: path.file_name().map_or_else(
+                || "Untitled".to_string(),
+                |n| n.to_string_lossy().into_owned(),
+            ),
+            events: self.events.clone(), // clone the pointer
+            error: self.error.clone(),   // clone the pointer
+            ..HexSession::default()
+        };
+
+        // Load the IntelHex
+        new_session.ih = ih;
+
+        // Re-calculate address range
+        new_session.addr =
+            new_session.ih.get_min_addr().unwrap_or(0)..=new_session.ih.get_max_addr().unwrap_or(0);
+
+        // Add the new session and switch to it
+        self.sessions.push(new_session);
+        self.active_index = Some(self.sessions.len() - 1);
+    }
+
+    pub(crate) fn close_file(&mut self, session_id: usize) {
+        self.sessions.remove(session_id);
+
+        if self.sessions.is_empty() {
+            self.active_index = None;
         } else {
-            // Clear the state of the app
-            self.clear();
-
-            // Load the IntelHex
-            self.ih = ih;
-
-            // Re-calculate address range
-            self.addr = self.ih.get_min_addr().unwrap_or(0)..=self.ih.get_max_addr().unwrap_or(0);
+            self.active_index = Some(0);
         }
     }
 }

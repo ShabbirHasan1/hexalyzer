@@ -1,4 +1,4 @@
-use crate::app::HexViewerApp;
+use crate::app::HexSession;
 use eframe::egui;
 
 #[derive(Default)]
@@ -18,7 +18,7 @@ impl JumpTo {
     }
 }
 
-impl HexViewerApp {
+impl HexSession {
     /// Show contents of jumpto menu
     pub(crate) fn show_jumpto_contents(&mut self, ui: &mut egui::Ui) {
         let textedit = ui.add(
@@ -40,7 +40,7 @@ impl HexViewerApp {
             self.selection.clear();
         }
 
-        if self.events.enter_released && self.jump_to.has_focus {
+        if self.events.borrow().enter_released && self.jump_to.has_focus {
             self.jump_to.addr = usize::from_str_radix(&self.jump_to.input, 16).ok();
         }
     }

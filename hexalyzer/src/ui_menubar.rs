@@ -40,6 +40,8 @@ impl HexViewerApp {
 
                         // EXPORT BUTTON
                         if ui.button("Export").clicked()
+                            && let Some(curr_session) = self.get_curr_session_mut()
+                            && curr_session.ih.size != 0
                             && let Some(path) = rfd::FileDialog::new()
                                 .set_title("Save As")
                                 .add_filter("Binary", &["bin"])
@@ -49,24 +51,30 @@ impl HexViewerApp {
                             let format = format_from_extension(&path).unwrap_or(SaveFormat::Bin);
 
                             let res: Result<(), Box<dyn Error>> = match format {
-                                SaveFormat::Bin => self.ih.write_bin(path, 0x00),
-                                SaveFormat::Hex => self.ih.write_hex(path),
+                                SaveFormat::Bin => curr_session.ih.write_bin(path, 0x00),
+                                SaveFormat::Hex => curr_session.ih.write_hex(path),
                             };
                             if let Err(msg) = res {
-                                self.error = Some(msg.to_string());
+                                self.error.borrow_mut().replace(msg.to_string());
                             }
                         }
 
                         // CLOSE BUTTON
-                        if ui.button("Close").clicked() {
-                            self.clear();
+                        if ui.button("Close").clicked()
+                            && let Some(curr_session_id) = self.active_index
+                            && let Some(_) = self.get_curr_session()
+                        {
+                            self.close_file(curr_session_id);
                         }
                     });
 
                     // EDIT BUTTON
                     ui.menu_button("Edit", |ui| {
                         // OPEN BUTTON
-                        if ui.button("Re-address").clicked() && self.ih.size > 0 {
+                        if ui.button("Re-address").clicked()
+                            && let Some(curr_session) = self.get_curr_session()
+                            && curr_session.ih.size != 0
+                        {
                             self.popup.active = true;
                             self.popup.ptype = Some(PopupType::ReAddr);
                         }

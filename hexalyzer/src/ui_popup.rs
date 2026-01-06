@@ -103,7 +103,7 @@ impl HexViewerApp {
 
         ui.add_space(8.0);
 
-        if ui.button(" OK ").clicked() || self.events.enter_released {
+        if ui.button(" OK ").clicked() || self.events.borrow().enter_released {
             // Close the window
             return true;
         }
@@ -124,7 +124,7 @@ impl HexViewerApp {
                 ui.allocate_rect(content_rect, egui::Sense::click());
 
                 // Collect input events once per frame and store in the app state
-                self.events = collect_ui_events(ui);
+                *self.events.borrow_mut() = collect_ui_events(ui);
             });
 
         // Darken the background
@@ -154,42 +154,44 @@ impl HexViewerApp {
 
         window.show(ctx, |ui| match popup_type {
             PopupType::Error => {
-                let error = self.error.as_deref().unwrap_or("?");
-                close_confirm = Self::display_error(ui, error);
+                let error = self.error.borrow().clone().unwrap_or_default();
+                close_confirm = Self::display_error(ui, &error);
             }
             PopupType::About => close_confirm = Self::display_about(ui),
             PopupType::ReAddr => close_confirm = self.display_readdr(ui),
         });
 
-        self.popup.active = !close_confirm && is_open && !self.events.escape_pressed;
+        self.popup.active = !close_confirm && is_open && !self.events.borrow().escape_pressed;
 
         // If the window got closed this frame
         if was_open && !self.popup.active {
-            self.error = None;
+            *self.error.borrow_mut() = None;
 
             // If the pop-up closed was readdr -> relocate bytes and do some cleanup
             if self.popup.ptype == Some(PopupType::ReAddr) && close_confirm {
                 let addr = usize::from_str_radix(&self.popup.text_input, 16).unwrap_or_default();
 
-                // Re-address the IntelHex
-                match self.ih.relocate(addr) {
-                    Ok(()) => {}
-                    Err(err) => {
-                        self.popup.clear();
-                        self.error = Some(err.to_string());
-                        return;
-                    }
-                }
-
                 // Clear text field
                 self.popup.text_input.clear();
 
-                // Re-calculate address range
-                self.addr =
-                    self.ih.get_min_addr().unwrap_or(0)..=self.ih.get_max_addr().unwrap_or(0);
+                if let Some(curr_session) = self.get_curr_session_mut() {
+                    // Re-address the IntelHex
+                    match curr_session.ih.relocate(addr) {
+                        Ok(()) => {}
+                        Err(err) => {
+                            self.popup.clear();
+                            self.error.borrow_mut().replace(err.to_string());
+                            return;
+                        }
+                    }
 
-                // Redo search
-                self.search.redo();
+                    // Re-calculate address range
+                    curr_session.addr = curr_session.ih.get_min_addr().unwrap_or(0)
+                        ..=curr_session.ih.get_max_addr().unwrap_or(0);
+
+                    // Redo search
+                    curr_session.search.redo();
+                }
             }
 
             self.popup.clear();

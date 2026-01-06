@@ -1,4 +1,4 @@
-use crate::app::HexViewerApp;
+use crate::app::{HexSession, HexViewerApp};
 use crate::ui_inspector::format_with_separators;
 use eframe::egui;
 
@@ -9,18 +9,22 @@ impl HexViewerApp {
             .show(ctx, |ui| {
                 ui.add_space(3.0);
 
+                // Get the currently active session. If none active - use the dummy one
+                // to construct the UI.
+                // TODO: better way than using dummy?
+                let mut dummy_session = HexSession::default();
+                let curr_session: &mut HexSession = self
+                    .get_curr_session_mut()
+                    .map_or_else(|| &mut dummy_session, |s| s);
+
                 // FILE INFORMATION
                 egui::CollapsingHeader::new("File Information")
                     .default_open(true)
                     .show(ui, |ui| {
                         ui.add_space(5.0);
 
-                        let filepath = self.ih.filepath.to_string_lossy().into_owned();
-                        let filename = self
-                            .ih
-                            .filepath
-                            .file_name()
-                            .map_or_else(|| "--".to_string(), |n| n.to_string_lossy().into_owned());
+                        let filepath = curr_session.ih.filepath.to_string_lossy().into_owned();
+                        let filename = &curr_session.name;
 
                         egui::Grid::new("file_info_grid")
                             .num_columns(2) // two columns: label + value
@@ -49,7 +53,7 @@ impl HexViewerApp {
                                         ui.label("File Size");
                                     },
                                 );
-                                let size = format_with_separators(self.ih.size);
+                                let size = format_with_separators(curr_session.ih.size);
                                 ui.label(format!("{size} bytes"));
                                 ui.end_row();
                             });
@@ -64,7 +68,7 @@ impl HexViewerApp {
                     .default_open(true)
                     .show(ui, |ui| {
                         ui.add_space(5.0);
-                        self.show_jumpto_contents(ui);
+                        curr_session.show_jumpto_contents(ui);
                         ui.add_space(5.0);
                     });
 
@@ -75,7 +79,7 @@ impl HexViewerApp {
                     .default_open(true)
                     .show(ui, |ui| {
                         ui.add_space(5.0);
-                        self.show_search_contents(ui);
+                        curr_session.show_search_contents(ui);
                         ui.add_space(5.0);
                     });
 
@@ -86,7 +90,7 @@ impl HexViewerApp {
                     .default_open(true)
                     .show(ui, |ui| {
                         ui.add_space(5.0);
-                        self.show_data_inspector_contents(ui);
+                        curr_session.show_data_inspector_contents(ui);
                         ui.add_space(5.0);
                     });
             });

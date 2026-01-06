@@ -1,4 +1,4 @@
-use crate::app::{Endianness, HexViewerApp};
+use crate::app::{Endianness, HexSession};
 use eframe::egui;
 use eframe::egui::Ui;
 
@@ -50,7 +50,7 @@ fn format_float<T: Into<f64>>(float_value: T) -> String {
     format!("{}.{}", format_with_separators(int_part), frac_part)
 }
 
-impl HexViewerApp {
+impl HexSession {
     #[allow(clippy::similar_names, clippy::too_many_lines)]
     pub(crate) fn show_data_inspector_contents(&mut self, ui: &mut Ui) {
         ui.radio_value(&mut self.endianness, Endianness::Little, "Little Endian");

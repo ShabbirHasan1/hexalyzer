@@ -1,4 +1,4 @@
-use crate::app::HexViewerApp;
+use crate::app::HexSession;
 use eframe::egui;
 use std::collections::btree_map;
 
@@ -53,7 +53,7 @@ impl Search {
     }
 }
 
-impl HexViewerApp {
+impl HexSession {
     /// Show contents of search menu
     pub(crate) fn show_search_contents(&mut self, ui: &mut egui::Ui) {
         // RadioButtons to select between byte and ascii search
@@ -84,7 +84,7 @@ impl HexViewerApp {
             self.selection.clear();
         }
 
-        if (self.events.enter_released && self.search.has_focus) || self.search.force {
+        if (self.events.borrow().enter_released && self.search.has_focus) || self.search.force {
             // Same input -> move to next result, otherwise -> search again
             if self.search.current == self.search.last {
                 if !self.search.results.is_empty() {

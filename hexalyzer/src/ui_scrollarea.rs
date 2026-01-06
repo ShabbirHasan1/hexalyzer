@@ -1,19 +1,21 @@
-use crate::app::HexViewerApp;
+use crate::app::HexSession;
 use eframe::egui;
 
-impl HexViewerApp {
+impl HexSession {
     #[allow(
         clippy::cast_precision_loss,
         clippy::cast_sign_loss,
         clippy::cast_possible_truncation
     )]
     /// Get scroll offset along Y axis
-    pub(crate) fn get_scroll_offset(&mut self, ui: &egui::Ui, addr: usize) -> f32 {
-        let row_idx = addr.saturating_sub(*self.addr.start()) / self.bytes_per_row;
+    fn get_scroll_offset(&self, ui: &egui::Ui, addr: usize, bytes_per_row: usize) -> f32 {
+        let row_idx = addr.saturating_sub(*self.addr.start()) / bytes_per_row;
 
         // Handle edge case
         if row_idx > f32::MAX as usize {
-            self.error = Some("Row index larger than f32 max value - display failed.".to_string());
+            self.error
+                .borrow_mut()
+                .replace("Row index larger than f32 max value - display failed.".to_string());
             return 0.0;
         }
 
@@ -31,14 +33,18 @@ impl HexViewerApp {
     }
 
     /// Create scroll area (with offset if jump or search is triggered)
-    pub(crate) fn create_scroll_area(&mut self, ui: &egui::Ui) -> egui::ScrollArea {
+    pub(crate) fn create_scroll_area(
+        &mut self,
+        ui: &egui::Ui,
+        bytes_per_row: usize,
+    ) -> egui::ScrollArea {
         let mut scroll_area = egui::ScrollArea::vertical();
         if let Some(addr) = self.search.addr {
-            let offset = self.get_scroll_offset(ui, addr);
+            let offset = self.get_scroll_offset(ui, addr, bytes_per_row);
             scroll_area = scroll_area.vertical_scroll_offset(offset);
             self.search.addr = None;
         } else if let Some(addr) = self.jump_to.addr {
-            let offset = self.get_scroll_offset(ui, addr);
+            let offset = self.get_scroll_offset(ui, addr, bytes_per_row);
             scroll_area = scroll_area.vertical_scroll_offset(offset);
             self.jump_to.addr = None;
         }

@@ -1,20 +1,19 @@
-use crate::HexViewerApp;
-use crate::app::colors;
+use crate::app::{HexSession, colors};
 use crate::events::collect_ui_events;
 use crate::ui_button::light_mono_button;
 use eframe::egui;
 use std::ops::Range;
 
-impl HexViewerApp {
-    pub(crate) fn show_central_panel(&mut self, ctx: &egui::Context) {
+impl HexSession {
+    pub(crate) fn show_central_panel(&mut self, ctx: &egui::Context, bytes_per_row: usize) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            let total_rows = (self.addr.end() - self.addr.start()).div_ceil(self.bytes_per_row);
+            let total_rows = (self.addr.end() - self.addr.start()).div_ceil(bytes_per_row);
 
             // Get row height in pixels (depends on font size)
             let row_height = ui.text_style_height(&egui::TextStyle::Monospace);
 
             // Create scroll area. Scroll if search or addr jump is triggered.
-            let scroll_area = self.create_scroll_area(ui);
+            let scroll_area = self.create_scroll_area(ui, bytes_per_row);
 
             scroll_area
                 .wheel_scroll_multiplier(egui::Vec2 { x: 1.0, y: 0.4 }) // slow vertical scroll
@@ -26,9 +25,9 @@ impl HexViewerApp {
                 .auto_shrink([false; 2])
                 .show_rows(ui, row_height, total_rows, |ui, row_range| {
                     // Collect input events once per frame and store in the app state
-                    self.events = collect_ui_events(ui);
+                    *self.events.borrow_mut() = collect_ui_events(ui);
                     // Draw the main canvas with hex content
-                    self.draw_main_canvas(ui, row_range);
+                    self.draw_main_canvas(ui, row_range, bytes_per_row);
                 })
         });
 
@@ -37,10 +36,15 @@ impl HexViewerApp {
         self.jump_to.addr = None;
     }
 
-    fn draw_main_canvas(&mut self, ui: &mut egui::Ui, row_range: Range<usize>) {
+    fn draw_main_canvas(
+        &mut self,
+        ui: &mut egui::Ui,
+        row_range: Range<usize>,
+        bytes_per_row: usize,
+    ) {
         // Get state of the mouse click from aggregated events
-        let pointer_down = self.events.pointer_down;
-        let pointer_hover = self.events.pointer_hover;
+        let pointer_down = self.events.borrow().pointer_down;
+        let pointer_hover = self.events.borrow().pointer_hover;
 
         // Detect released clicked
         if !pointer_down {
@@ -48,13 +52,13 @@ impl HexViewerApp {
         }
 
         // Get state of key press (hex chars) from aggregated events
-        let typed_char = self.events.last_hex_char_released;
+        let typed_char = self.events.borrow().last_hex_char_released;
 
         // Update byte edit buffer base on the key press
         self.update_edit_buffer(typed_char);
 
         // Cancel byte editing / selection on Esc press
-        if self.events.escape_pressed {
+        if self.events.borrow().escape_pressed {
             if !self.editor.in_progress {
                 self.selection.clear();
             }
@@ -64,7 +68,7 @@ impl HexViewerApp {
 
         // Draw rows
         for row in row_range {
-            self.draw_row(ui, row, pointer_down, pointer_hover);
+            self.draw_row(ui, row, pointer_down, pointer_hover, bytes_per_row);
         }
     }
 
@@ -74,11 +78,12 @@ impl HexViewerApp {
         row: usize,
         pointer_down: bool,
         pointer_hover: Option<egui::Pos2>,
+        bytes_per_row: usize,
     ) {
         ui.horizontal(|ui| {
             // Start and end addresses
-            let start = self.addr.start() + row * self.bytes_per_row;
-            let end = start + self.bytes_per_row;
+            let start = self.addr.start() + row * bytes_per_row;
+            let end = start + bytes_per_row;
 
             // Display address (fixed width, monospaced)
             ui.monospace(format!("{start:08X}"));
