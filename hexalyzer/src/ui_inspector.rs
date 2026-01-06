@@ -52,6 +52,7 @@ fn format_float<T: Into<f64>>(float_value: T) -> String {
 
 impl HexSession {
     #[allow(clippy::similar_names, clippy::too_many_lines)]
+    /// Displays the inspector panel for the selected data.
     pub(crate) fn show_data_inspector_contents(&mut self, ui: &mut Ui) {
         ui.radio_value(&mut self.endianness, Endianness::Little, "Little Endian");
         ui.radio_value(&mut self.endianness, Endianness::Big, "Big Endian");

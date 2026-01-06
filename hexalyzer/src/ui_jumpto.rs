@@ -9,6 +9,7 @@ pub struct JumpTo {
     pub(crate) addr: Option<usize>,
     /// User input string
     input: String,
+    /// Force to loose focus from the text field
     loose_focus: bool,
 }
 
@@ -19,7 +20,7 @@ impl JumpTo {
 }
 
 impl HexSession {
-    /// Show contents of jumpto menu
+    /// Displays the `JumpTo` panel for jumping to a specific address.
     pub(crate) fn show_jumpto_contents(&mut self, ui: &mut egui::Ui) {
         let textedit = ui.add(
             egui::TextEdit::singleline(&mut self.jump_to.input)

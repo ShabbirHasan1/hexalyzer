@@ -32,7 +32,7 @@ impl HexSession {
         target_y - cursor.y
     }
 
-    /// Create scroll area (with offset if jump or search is triggered)
+    /// Create a scroll area (with offset if jump or search is triggered)
     pub(crate) fn create_scroll_area(
         &mut self,
         ui: &egui::Ui,

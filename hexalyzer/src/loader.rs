@@ -40,6 +40,9 @@ fn detect_file_kind(path: &PathBuf) -> std::io::Result<FileKind> {
 }
 
 impl HexViewerApp {
+    /// Load hex file from disk and add it to the list of opened sessions.
+    /// If the file is already open, switch to it.
+    /// If the maximum number of tabs is reached, display an error message.
     pub(crate) fn load_file(&mut self, path: &PathBuf) {
         // Check if the file is already open
         if let Some(index) = self.sessions.iter().position(|s| s.ih.filepath == *path) {
@@ -103,6 +106,7 @@ impl HexViewerApp {
         self.active_index = Some(self.sessions.len() - 1);
     }
 
+    /// Close the file with the given ID. When the file is closed, switch to the first one.
     pub(crate) fn close_file(&mut self, session_id: usize) {
         self.sessions.remove(session_id);
 

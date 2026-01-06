@@ -25,13 +25,16 @@ impl PopupType {
 
 #[derive(Default)]
 pub struct Popup {
+    /// Is there a pop-up
     pub(crate) active: bool,
+    /// Type of the pop-up. Used to determine the title and content of the window.
     pub(crate) ptype: Option<PopupType>,
-    /// If text field is in the popup
+    /// Text field content in the pop-up, if present
     text_input: String,
 }
 
 impl Popup {
+    /// Clear (aka remove) the pop-up
     pub const fn clear(&mut self) {
         self.active = false;
         self.ptype = None;
@@ -112,7 +115,7 @@ impl HexViewerApp {
         false
     }
 
-    /// Show pop-up
+    /// Show the pop-up
     pub(crate) fn show_popup(&mut self, ctx: &egui::Context) {
         let content_rect = ctx.content_rect();
 

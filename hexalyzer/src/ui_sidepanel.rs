@@ -3,6 +3,7 @@ use crate::ui_inspector::format_with_separators;
 use eframe::egui;
 
 impl HexViewerApp {
+    /// Show the side panel with the file information, jump to address, search, and data inspector.
     pub(crate) fn show_side_panel(&mut self, ctx: &egui::Context) {
         egui::SidePanel::left("left_panel")
             .exact_width(280.0)

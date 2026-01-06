@@ -22,6 +22,7 @@ fn format_from_extension(path: &std::path::Path) -> Option<SaveFormat> {
 }
 
 impl HexViewerApp {
+    /// Displays the top menu bar with File, Edit, View, and About buttons
     pub(crate) fn show_menu_bar(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("menubar").show(ctx, |ui| {
             ui.add_space(3.0);

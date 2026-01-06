@@ -55,7 +55,6 @@ impl eframe::App for HexViewerApp {
 
         self.show_menu_bar(ctx);
 
-        // TODO: move this somewhere
         if self.error.borrow().is_some() {
             self.popup.active = true;
             self.popup.ptype = Some(PopupType::Error);
@@ -98,8 +97,6 @@ fn load_icon() -> egui::IconData {
 }
 
 // TODO for MVP:
-// Redo / restore
-// ctrl + c?
 // Verify export works OK
 // Polish up code
 // Add documentation
@@ -108,3 +105,4 @@ fn load_icon() -> egui::IconData {
 // Use LayoutJob or other methods to do custom bytes display instead of widget (BIG TASK)
 // Prefetch the visible window into a Vec and render from that cache.
 // Instead of rendering gaps fully, use egui Separator or other thing to show the address gap
+// Ctrl + C / Z

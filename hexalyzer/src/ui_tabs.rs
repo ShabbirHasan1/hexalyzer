@@ -3,6 +3,9 @@ use crate::ui_button;
 use eframe::egui;
 
 impl HexViewerApp {
+    /// Show tabs with the list of open files.
+    /// Tabs are constrained to fit into the available space.
+    /// If the number of tabs does not exceed the maximum allowed, the "Open New File" tab is added.
     pub(crate) fn show_tabs(&mut self, ctx: &egui::Context) {
         egui::TopBottomPanel::top("tabs_panel").show(ctx, |ui| {
             ui.horizontal(|ui| {

@@ -2,6 +2,10 @@ use crate::app::HexViewerApp;
 use eframe::egui;
 
 impl HexViewerApp {
+    /// Handle drag and drop events:
+    /// - If a file is dropped, load it into the app.
+    /// - If a file is dragged over the central panel, display a message.
+    /// - If the popup is shown, do not handle drag and drop events.
     pub(crate) fn handle_drag_and_drop(&mut self, ctx: &egui::Context) {
         // Return if the popup is shown
         // TODO: also consider async file dialog (for the future) as the app panics if file is dragged when the dialog window is open

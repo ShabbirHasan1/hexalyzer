@@ -4,28 +4,40 @@ use std::collections::btree_map;
 
 #[derive(Default, PartialEq, Clone)]
 struct SearchState {
+    /// User input
     input: String,
+    /// Is search text in ASCII representation
     is_ascii: bool,
 }
 
 #[derive(Default)]
 pub struct Search {
+    /// Start address of the search results
     pub(crate) addr: Option<usize>,
+    /// List of addresses where the match was found
     pub(crate) results: Vec<usize>,
+    /// Length of the search pattern in bytes
     pub(crate) length: usize,
+    /// Does the search text field have focus
     pub(crate) has_focus: bool,
+    /// Index of the current search result
     idx: usize,
 
-    // UI control flags
+    // -- UI control flags
+    /// Force the search to be performed even if the input is the same as the last one
     force: bool,
+    /// Force to loose focus from the text field
     loose_focus: bool,
 
-    // Input states
+    // -- Input states
+    /// Current search state
     current: SearchState,
+    /// Previous search state. Used to detect if the input changed and the search should be repeated.
     last: SearchState,
 }
 
 impl Search {
+    /// Clear the search state
     pub(crate) fn clear(&mut self) {
         self.has_focus = false;
         self.addr = None;
@@ -37,6 +49,7 @@ impl Search {
         self.force = false;
     }
 
+    /// Redo the last search
     pub(crate) fn redo(&mut self) {
         // In case the current input field is not valid
         self.current = self.last.clone();
@@ -48,13 +61,14 @@ impl Search {
         self.force = true;
     }
 
+    /// Force to loose focus from the text field
     pub(crate) const fn loose_focus(&mut self) {
         self.loose_focus = true;
     }
 }
 
 impl HexSession {
-    /// Show contents of search menu
+    /// Show content of the search menu
     pub(crate) fn show_search_contents(&mut self, ui: &mut egui::Ui) {
         // RadioButtons to select between byte and ascii search
         ui.horizontal(|ui| {

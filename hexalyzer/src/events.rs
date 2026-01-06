@@ -36,7 +36,7 @@ const fn key_to_hex_char(key: egui::Key) -> Option<char> {
     })
 }
 
-/// Collect events once per frame and return aggregated state
+/// Collect events once per frame and return an aggregated state
 pub fn collect_ui_events(ui: &egui::Ui) -> EventState {
     ui.input(|i| {
         let mut state = EventState {

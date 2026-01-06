@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::app::HexSession;
+use std::collections::HashMap;
 
 #[derive(Default)]
 pub struct ByteEdit {

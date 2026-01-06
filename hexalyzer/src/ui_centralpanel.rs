@@ -5,6 +5,9 @@ use eframe::egui;
 use std::ops::Range;
 
 impl HexSession {
+    /// Displays the central panel of the UI for rendering the hex editor content.
+    /// This function draws the main content area of the application. It uses the `egui::CentralPanel`
+    /// to define the central region and implements a scrollable hex view with UI event handling.
     pub(crate) fn show_central_panel(&mut self, ctx: &egui::Context, bytes_per_row: usize) {
         egui::CentralPanel::default().show(ctx, |ui| {
             let total_rows = (self.addr.end() - self.addr.start()).div_ceil(bytes_per_row);
@@ -78,12 +81,12 @@ impl HexSession {
                 Some(egui::Key::ArrowLeft) => {
                     r[0] = r[0].saturating_sub(1);
                     r[1] = r[0];
-                },
+                }
                 Some(egui::Key::ArrowRight) => {
                     r[0] = r[0].saturating_add(1);
                     r[1] = r[0];
                 }
-                _ => {},
+                _ => {}
             }
         }
     }
