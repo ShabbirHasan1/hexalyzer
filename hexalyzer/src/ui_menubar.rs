@@ -70,13 +70,21 @@ impl HexViewerApp {
 
                     // EDIT BUTTON
                     ui.menu_button("Edit", |ui| {
-                        // OPEN BUTTON
+                        // READDRESS BUTTON
                         if ui.button("Re-address").clicked()
                             && let Some(curr_session) = self.get_curr_session()
                             && curr_session.ih.size != 0
                         {
                             self.popup.active = true;
                             self.popup.ptype = Some(PopupType::ReAddr);
+                        }
+
+                        // RESTORE BUTTON
+                        if ui.button("Restore changes").clicked()
+                            && let Some(curr_session) = self.get_curr_session_mut()
+                            && curr_session.ih.size != 0
+                        {
+                            curr_session.restore();
                         }
                     });
 

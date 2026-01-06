@@ -228,7 +228,7 @@ impl HexSession {
             }
         }
 
-        if self.editor.modified.contains(&addr) {
+        if self.editor.modified.contains_key(&addr) {
             // If modified -> highlight (3rd prio)
             ui.painter().rect_filled(widget.rect, 0.0, colors::MUD);
         }

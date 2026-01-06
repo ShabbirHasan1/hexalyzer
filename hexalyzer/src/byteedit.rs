@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use crate::app::HexSession;
 
 #[derive(Default)]
@@ -8,8 +9,8 @@ pub struct ByteEdit {
     pub(crate) buffer: String,
     /// Address range of the bytes being edited
     pub(crate) addr: Option<[usize; 2]>,
-    /// Tracks the modified bytes
-    pub(crate) modified: Vec<usize>,
+    /// Tracks the modified bytes by storing addresses and original values before modification
+    pub(crate) modified: HashMap<usize, u8>,
 }
 
 impl ByteEdit {
@@ -66,7 +67,7 @@ impl HexSession {
                             && let Some(prev) = prev_value
                             && value != prev
                         {
-                            self.editor.modified.push(addr);
+                            self.editor.modified.entry(addr).or_insert(prev);
                         }
                     }
 
@@ -77,6 +78,19 @@ impl HexSession {
                 }
                 self.editor.clear();
             }
+        }
+    }
+
+    /// Restore all modified bytes to their original values
+    pub(crate) fn restore(&mut self) {
+        for (&addr, &orig_value) in &self.editor.modified {
+            let _ = self.ih.update_byte(addr, orig_value);
+        }
+
+        self.editor.modified.clear();
+
+        if !self.search.results.is_empty() {
+            self.search.redo();
         }
     }
 }
