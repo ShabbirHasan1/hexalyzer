@@ -41,6 +41,12 @@ fn detect_file_kind(path: &PathBuf) -> std::io::Result<FileKind> {
 
 impl HexViewerApp {
     pub(crate) fn load_file(&mut self, path: &PathBuf) {
+        // Check if the file is already open
+        if let Some(index) = self.sessions.iter().position(|s| s.ih.filepath == *path) {
+            self.active_index = Some(index);
+            return;
+        }
+
         // Prevent loading more files than allowed by the app settings
         if self.sessions.len() >= self.max_tabs {
             self.error

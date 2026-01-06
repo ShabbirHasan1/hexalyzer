@@ -376,7 +376,11 @@ impl IntelHex {
     /// // Due to address gaps, the written bin file size is large
     /// assert_eq!(std::fs::metadata("build/ex3/ih.bin").unwrap().len(), 115264);
     /// ```
-    pub fn write_bin<P: AsRef<Path>>(&mut self, filepath: P, gap_fill: u8) -> Result<(), Box<dyn Error>> {
+    pub fn write_bin<P: AsRef<Path>>(
+        &mut self,
+        filepath: P,
+        gap_fill: u8,
+    ) -> Result<(), Box<dyn Error>> {
         // Ensure the parent directory exists
         if let Some(parent) = filepath.as_ref().parent() {
             std::fs::create_dir_all(parent)?;
@@ -628,6 +632,8 @@ impl IntelHex {
         let min_addr = self.get_min_addr().ok_or(IntelHexError::UpdateError(
             IntelHexErrorKind::IntelHexInstanceEmpty,
         ))?;
+
+        // TODO: check max addr < u32 max after conversion
 
         if new_start_address > u32::MAX as usize {
             return Err(IntelHexError::UpdateError(

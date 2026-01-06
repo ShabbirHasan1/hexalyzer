@@ -71,7 +71,7 @@ pub enum IntelHexErrorKind {
     InvalidAddress(usize),
     /// Encountered second start address record
     DuplicateStartAddress,
-    /// IntelHex instance has no data
+    /// `IntelHex` instance has no data
     IntelHexInstanceEmpty,
 }
 

@@ -12,7 +12,6 @@ use std::rc::Rc;
 pub mod colors {
     use eframe::egui::Color32;
 
-    // pub const TRANSPARENT: Color32 = Color32::from_rgba_premultiplied(0, 0, 0, 0);
     pub const LIGHT_BLUE: Color32 = Color32::from_rgba_premultiplied(33, 81, 109, 20);
     pub const MUD: Color32 = Color32::from_rgba_premultiplied(54, 44, 19, 20);
     pub const GREEN: Color32 = Color32::from_rgba_premultiplied(35, 53, 38, 20);
@@ -28,6 +27,7 @@ pub enum Endianness {
 }
 
 pub struct HexSession {
+    /// Name of the session (aka filename)
     pub name: String,
     /// `IntelHex` object returned by `intelhexlib`
     pub ih: IntelHex,
@@ -114,7 +114,7 @@ impl HexViewerApp {
         self.active_index.and_then(|i| self.sessions.get(i))
     }
 
-    /// Get a mutable reference to the currently active session
+    /// Get a mutable reference to the currently active session, if any
     pub(crate) fn get_curr_session_mut(&mut self) -> Option<&mut HexSession> {
         self.active_index.and_then(|i| self.sessions.get_mut(i))
     }

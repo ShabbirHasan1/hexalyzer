@@ -70,6 +70,22 @@ impl HexSession {
         for row in row_range {
             self.draw_row(ui, row, pointer_down, pointer_hover, bytes_per_row);
         }
+
+        // Handle arrow key events
+        // TODO: jump over empty bytes and up down presses
+        if let Some(r) = self.selection.range.as_mut() {
+            match self.events.borrow().arrow_key_released {
+                Some(egui::Key::ArrowLeft) => {
+                    r[0] = r[0].saturating_sub(1);
+                    r[1] = r[0];
+                },
+                Some(egui::Key::ArrowRight) => {
+                    r[0] = r[0].saturating_add(1);
+                    r[1] = r[0];
+                }
+                _ => {},
+            }
+        }
     }
 
     fn draw_row(

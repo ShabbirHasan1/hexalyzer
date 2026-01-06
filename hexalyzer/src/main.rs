@@ -98,10 +98,8 @@ fn load_icon() -> egui::IconData {
 }
 
 // TODO for MVP:
-// If attach same file?
 // Redo / restore
 // ctrl + c?
-// Move bytes with arrows?
 // Verify export works OK
 // Polish up code
 // Add documentation
