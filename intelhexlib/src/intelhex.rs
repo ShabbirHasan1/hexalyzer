@@ -723,6 +723,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cast_possible_truncation)]
     fn test_get_buffer_slice_valid() {
         // Arrange
         let mut ih = IntelHex::new();
@@ -747,6 +748,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cast_possible_truncation)]
     fn test_get_buffer_slice_with_gaps() {
         // Arrange
         let mut ih = IntelHex::new();
@@ -771,6 +773,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cast_possible_truncation)]
     fn test_get_buffer_slice_invalid() {
         // Arrange
         let mut ih = IntelHex::new();
@@ -779,12 +782,10 @@ mod tests {
         let length = 10;
 
         let mut addr_vec = Vec::with_capacity(length);
-        let mut expected_res_vec = Vec::with_capacity(length);
 
         for addr in addr_start..=addr_start + length {
             addr_vec.push(addr); // construct addr vector
             ih.buffer.insert(addr, addr as u8); // insert key-value pair into the map
-            expected_res_vec.push(addr as u8); // push the value into expected result vec
         }
         ih.buffer.pop_last(); // pop the last addr
 
@@ -827,6 +828,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cast_possible_truncation)]
     fn test_update_buffer_slice_valid() {
         // Arrange
         let mut ih = IntelHex::new();
@@ -852,6 +854,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cast_possible_truncation)]
     fn test_update_buffer_slice_with_gap() {
         // Arrange
         let mut ih = IntelHex::new();
@@ -877,6 +880,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::cast_possible_truncation)]
     fn test_update_buffer_slice_invalid() {
         // Arrange
         let mut ih = IntelHex::new();

@@ -34,7 +34,7 @@ impl fmt::Display for IntelHexError {
             Self::UpdateError(base_err) => {
                 write!(
                     f,
-                    "Error encountered during update of IntelHex struct instance:\n{base_err}",
+                    "Error encountered during update of IntelHex instance:\n{base_err}",
                 )
             }
         }

@@ -2,60 +2,79 @@ use intelhexlib::{IntelHex, IntelHexError, IntelHexErrorKind};
 use std::fs;
 
 #[test]
-fn test_from_hex() {
+fn test_loading_and_writing_hex_1() {
     // Define in/out paths
     let input_path = "tests/fixtures/ih_valid_2.hex";
     let output_path = "build/t1/ih.hex";
 
-    // Load hex and generate a new one
-    let mut ih = IntelHex::from_hex(input_path).unwrap();
-    ih.write_hex(output_path).unwrap();
+    // Load hex and check the result
+    let res = IntelHex::from_hex(input_path);
+    assert!(res.is_ok());
 
-    // Load them in memory (small files -> OK)
-    let f1 = fs::read(input_path).unwrap();
-    let f2 = fs::read(output_path).unwrap();
+    // If loaded Ok -> write it back to the disk
+    if let Ok(mut ih) = res {
+        let res = ih.write_hex(output_path);
+        assert!(res.is_ok());
 
-    // Assert contents (loaded as Vec) is the same
-    assert_eq!(f1, f2);
+        // Load them in memory (small files -> OK)
+        let f1 = fs::read(input_path);
+        let f2 = fs::read(output_path);
+
+        // Verify both are Ok and their contents match
+        assert!(f1.is_ok());
+        assert!(f2.is_ok());
+        assert!(f1.is_ok_and(|content1| f2.is_ok_and(|content2| content1 == content2)));
+    }
 }
 
 #[test]
-fn test_load_hex() {
+fn test_loading_and_writing_hex_2() {
     // Define in/out paths
     let input_path = "tests/fixtures/ih_valid_2.hex";
     let output_path = "build/t2/ih.hex";
 
-    // Load hex and generate a new one
+    // Load hex and check the resut
     let mut ih = IntelHex::new();
-    ih.load_hex(input_path).unwrap();
-    ih.write_hex(output_path).unwrap();
+    let res = ih.load_hex(input_path);
+    assert!(res.is_ok());
+
+    let res = ih.write_hex(output_path);
+    assert!(res.is_ok());
 
     // Load them in memory (small files -> OK)
-    let f1 = fs::read(input_path).unwrap();
-    let f2 = fs::read(output_path).unwrap();
+    let f1 = fs::read(input_path);
+    let f2 = fs::read(output_path);
 
-    // Assert contents (loaded as Vec) is the same
-    assert_eq!(f1, f2);
+    // Verify both are Ok and their contents match
+    assert!(f1.is_ok());
+    assert!(f2.is_ok());
+    assert!(f1.is_ok_and(|content1| f2.is_ok_and(|content2| content1 == content2)));
 }
 
 #[test]
+#[allow(clippy::panic)]
 fn test_hex_parsing_returns_error() {
     // Define in/out paths
     let input_path = "tests/fixtures/ih_bad_checksum.hex";
 
     // Parse hex file
-    let ih = IntelHex::from_hex(input_path);
+    let res = IntelHex::from_hex(input_path);
 
-    // Assert that the Result is Err
-    if let Some(my_err) = ih.unwrap_err().downcast_ref::<IntelHexError>() {
-        assert_eq!(
-            *my_err,
-            IntelHexError::ParseRecordError(
-                IntelHexErrorKind::RecordChecksumMismatch(0x55, 0xFF),
-                1
-            )
-        );
-    } else {
-        assert!(false, "Should have failed with error...");
+    // Check the error
+    match res {
+        Err(e) => {
+            if let Some(ih_err) = e.downcast_ref::<IntelHexError>() {
+                assert_eq!(
+                    ih_err,
+                    &IntelHexError::ParseRecordError(
+                        IntelHexErrorKind::RecordChecksumMismatch(0x55, 0xFF),
+                        1
+                    )
+                );
+            } else {
+                panic!("Error was not an IntelHexError");
+            }
+        }
+        Ok(_) => panic!("Expected an error, but got Ok"),
     }
 }

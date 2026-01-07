@@ -477,7 +477,7 @@ mod tests {
             // Convert to byte Vec
             let bytes: Vec<u8> = (0..trimmed_record.len())
                 .step_by(2)
-                .map(|i| u8::from_str_radix(&trimmed_record[i..i + 2], 16).unwrap())
+                .map(|i| u8::from_str_radix(&trimmed_record[i..i + 2], 16).unwrap_or_default())
                 .collect();
 
             assert_eq!(rec.checksum, Record::calculate_checksum(&bytes));
@@ -497,7 +497,7 @@ mod tests {
     #[test]
     fn test_parse_valid_records() {
         for (rec, rec_str) in get_valid_records() {
-            assert_eq!(Record::parse(rec_str).unwrap(), rec);
+            assert_eq!(Record::parse(rec_str), Ok(rec));
         }
     }
 
@@ -505,7 +505,7 @@ mod tests {
     fn test_parse_invalid_records() {
         let records_and_errors = get_invalid_str_records();
         for (record, expected_error) in records_and_errors {
-            assert_eq!(Record::parse(record).unwrap_err(), expected_error);
+            assert_eq!(Record::parse(record), Err(expected_error));
         }
     }
 
@@ -514,31 +514,31 @@ mod tests {
         // Data record
         let data: [u8; 4] = [0, 1, 2, 3];
         let res = Record::create(16, RecordType::Data, &data);
-        let expected_rec_str = ":0400100000010203E6";
-        assert_eq!(res.unwrap_or("".to_string()), expected_rec_str);
+        let expected_rec_str = ":0400100000010203E6".to_string();
+        assert_eq!(res, Ok(expected_rec_str));
 
         // Extended Linear Address record
         let data: [u8; 2] = [0x11, 0x22];
         let res = Record::create(0, RecordType::ExtendedLinearAddress, &data);
-        let expected_rec_str = ":020000041122C7";
-        assert_eq!(res.unwrap_or("".to_string()), expected_rec_str);
+        let expected_rec_str = ":020000041122C7".to_string();
+        assert_eq!(res, Ok(expected_rec_str));
 
         // End Of File record
         let res = Record::create(0, RecordType::EndOfFile, &[]);
-        let expected_rec_str = ":00000001FF";
-        assert_eq!(res.unwrap_or("".to_string()), expected_rec_str);
+        let expected_rec_str = ":00000001FF".to_string();
+        assert_eq!(res, Ok(expected_rec_str));
 
         // Start Linear Address record
         let data: [u8; 4] = [0x10, 0x43, 0xFF, 0xAA];
         let res = Record::create(0, RecordType::StartLinearAddress, &data);
-        let expected_rec_str = ":040000051043FFAAFB";
-        assert_eq!(res.unwrap_or("".to_string()), expected_rec_str);
+        let expected_rec_str = ":040000051043FFAAFB".to_string();
+        assert_eq!(res, Ok(expected_rec_str));
 
         // Start Segment Address record
         let data: [u8; 4] = [0x10, 0x43, 0xFF, 0xAA];
         let res = Record::create(0, RecordType::StartSegmentAddress, &data);
-        let expected_rec_str = ":040000031043FFAAFD";
-        assert_eq!(res.unwrap_or("".to_string()), expected_rec_str);
+        let expected_rec_str = ":040000031043FFAAFD".to_string();
+        assert_eq!(res, Ok(expected_rec_str));
     }
 
     #[test]
@@ -547,19 +547,23 @@ mod tests {
         let data = [0; 256];
         let res = Record::create(0, RecordType::Data, &data);
         assert_eq!(
-            res.unwrap_err(),
-            IntelHexError::CreateRecordError(IntelHexErrorKind::RecordTooLong)
+            res,
+            Err(IntelHexError::CreateRecordError(
+                IntelHexErrorKind::RecordTooLong
+            ))
         );
 
         // Extended Linear Address record
         let data: [u8; 2] = [0x11, 0x22];
         let res = Record::create(16, RecordType::ExtendedLinearAddress, &data);
         assert_eq!(
-            res.unwrap_err(),
-            IntelHexError::CreateRecordError(IntelHexErrorKind::RecordAddressInvalidForType(
-                RecordType::ExtendedLinearAddress,
-                0,
-                16
+            res,
+            Err(IntelHexError::CreateRecordError(
+                IntelHexErrorKind::RecordAddressInvalidForType(
+                    RecordType::ExtendedLinearAddress,
+                    0,
+                    16
+                )
             ))
         );
 
@@ -570,11 +574,13 @@ mod tests {
         let data: [u8; 3] = [0x10, 0x43, 0xFF];
         let res = Record::create(0, RecordType::StartLinearAddress, &data);
         assert_eq!(
-            res.unwrap_err(),
-            IntelHexError::CreateRecordError(IntelHexErrorKind::RecordLengthInvalidForType(
-                RecordType::StartLinearAddress,
-                4,
-                data.len()
+            res,
+            Err(IntelHexError::CreateRecordError(
+                IntelHexErrorKind::RecordLengthInvalidForType(
+                    RecordType::StartLinearAddress,
+                    4,
+                    data.len()
+                )
             ))
         );
 
@@ -582,11 +588,13 @@ mod tests {
         let data: [u8; 4] = [0x10, 0x43, 0xFF, 0xAA];
         let res = Record::create(0xFFFF, RecordType::StartSegmentAddress, &data);
         assert_eq!(
-            res.unwrap_err(),
-            IntelHexError::CreateRecordError(IntelHexErrorKind::RecordAddressInvalidForType(
-                RecordType::StartSegmentAddress,
-                0,
-                0xFFFF
+            res,
+            Err(IntelHexError::CreateRecordError(
+                IntelHexErrorKind::RecordAddressInvalidForType(
+                    RecordType::StartSegmentAddress,
+                    0,
+                    0xFFFF
+                )
             ))
         );
     }
