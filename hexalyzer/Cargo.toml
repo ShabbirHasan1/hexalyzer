@@ -11,6 +11,6 @@ intelhexlib.workspace = true
 [package.metadata.bundle]
 name = "hexalyzer"
 identifier = "none"
-icon = ["docs/icon.icns"]
+icon = ["assets/icon.icns"]
 version = "0.1.0"
 copyright = "Copyright © 2026"

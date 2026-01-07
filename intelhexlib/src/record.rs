@@ -192,6 +192,7 @@ impl Record {
 
                 Ok(record)
             }
+            // TODO: support legacy record?
             RecordType::ExtendedSegmentAddress => Err(IntelHexError::CreateRecordError(
                 IntelHexErrorKind::RecordNotSupported,
             )),
@@ -319,7 +320,7 @@ mod tests {
 
     /// Returns valid instances of Record and corresponding str representation
     ///
-    fn get_valid_records() -> [(Record, &'static str); 5] {
+    fn get_valid_records() -> [(Record, &'static str); 7] {
         [
             (
                 Record {
@@ -377,6 +378,26 @@ mod tests {
                 },
                 ":020000040003F7",
             ),
+            (
+                Record {
+                    length: 0x04,
+                    address: 0x0000,
+                    rtype: RecordType::StartLinearAddress,
+                    data: vec![0x00, 0x00, 0x00, 0xCD],
+                    checksum: 0x2A,
+                },
+                ":04000005000000CD2A",
+            ),
+            (
+                Record {
+                    length: 0x04,
+                    address: 0x0000,
+                    rtype: RecordType::StartSegmentAddress,
+                    data: vec![0x00, 0x00, 0x00, 0xCD],
+                    checksum: 0x2C,
+                },
+                ":04000003000000CD2C",
+            ),
         ]
     }
 
@@ -387,15 +408,9 @@ mod tests {
             // Removed ':' from record str
             ("00000001FF", IntelHexErrorKind::MissingStartCode),
             // Payload shorter that record length byte
-            (
-                ":100000000000FF",
-                IntelHexErrorKind::RecordInvalidPayloadLength,
-            ),
+            (":100000000000FF", IntelHexErrorKind::RecordInvalidPayloadLength),
             // Payload longer that record length byte
-            (
-                ":02000000000000FF",
-                IntelHexErrorKind::RecordInvalidPayloadLength,
-            ),
+            (":02000000000000FF", IntelHexErrorKind::RecordInvalidPayloadLength),
             // EOF record with fewer chars
             (":0000FF", IntelHexErrorKind::RecordTooShort),
             // EOF record with extra '0' added

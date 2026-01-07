@@ -7,3 +7,5 @@ cargo clippy --all-targets --all-features -- \
   -W clippy::unwrap_used \
   -W clippy::expect_used \
   -W clippy::panic
+
+cargo llvm-cov -p intelhexlib

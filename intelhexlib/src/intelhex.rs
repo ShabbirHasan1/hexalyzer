@@ -635,6 +635,7 @@ impl IntelHex {
                     IntelHexErrorKind::IntelHexInstanceEmpty,
                 ))?;
 
+        // Cap start address to u32::MAX (to not break API for now)
         if new_start_address > u32::MAX as usize {
             return Err(IntelHexError::UpdateError(
                 IntelHexErrorKind::InvalidAddress(new_start_address),
@@ -948,5 +949,38 @@ mod tests {
         // Assert
         assert!(min_addr.is_none());
         assert!(max_addr.is_none());
+    }
+
+    #[test]
+    fn test_relocate_valid() {
+        // Arrange
+        let mut ih = IntelHex::new();
+        ih.buffer.insert(0xFFFF, 0xFF);
+
+        // Act
+        let res = ih.relocate(0x0);
+
+        // Assert
+        assert!(res.is_ok());
+        assert_eq!(ih.buffer.get(&0x0), Some(&0xFF));
+    }
+
+    #[test]
+    fn test_relocate_invalid() {
+        // Arrange
+        let mut ih = IntelHex::new();
+        ih.buffer.insert(0x0000, 0xFF); // min addr
+        ih.buffer.insert(0xFFFF, 0xFF); // max addr
+
+        // Act
+        let res = ih.relocate(u32::MAX as usize);
+
+        // Assert
+        assert_eq!(
+            res,
+            Err(IntelHexError::UpdateError(
+                IntelHexErrorKind::RelocateAddressOverflow(0xFFFF_0000)
+            ))
+        );
     }
 }
