@@ -87,8 +87,11 @@ impl eframe::App for HexViewerApp {
 }
 
 fn load_icon() -> egui::IconData {
-    const ICON_RGBA: &[u8] = include_bytes!("../assets/icon.rgba");
-
+    #[cfg(target_os = "macos")]
+    const ICON_RGBA: &[u8] = include_bytes!("../assets/icon_mac.rgba");
+    #[cfg(not(target_os = "macos"))]
+    const ICON_RGBA: &[u8] = include_bytes!("../assets/icon_win.rgba");
+    
     egui::IconData {
         rgba: ICON_RGBA.to_vec(),
         width: 128,
