@@ -7,6 +7,10 @@
     clippy::panic
 )]
 
+// Tell OS to hide the console window when running.
+// This attribute is only applied if the target OS is Windows.
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+
 mod app;
 mod byteedit;
 mod events;
@@ -91,7 +95,7 @@ fn load_icon() -> egui::IconData {
     const ICON_RGBA: &[u8] = include_bytes!("../assets/icon_mac.rgba");
     #[cfg(not(target_os = "macos"))]
     const ICON_RGBA: &[u8] = include_bytes!("../assets/icon_win.rgba");
-    
+
     egui::IconData {
         rgba: ICON_RGBA.to_vec(),
         width: 128,

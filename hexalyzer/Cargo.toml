@@ -8,9 +8,12 @@ eframe.workspace = true
 rfd.workspace = true
 intelhexlib.workspace = true
 
-[package.metadata.bundle]
-name = "hexalyzer"
-identifier = "none"
-icon = ["assets/icon.icns"]
-version = "0.1.0"
+[package.metadata.packager]
+product_name = "Hexalyzer"
+identifier = "com.github.iharhl.hexalyzer"
+description = "IntelHex viewer and editor app"
+authors = ["Ihar Hlukhau | ihluk@outlook.com"]
 copyright = "Copyright © 2026"
+
+# Icons for all platforms
+icons = ["assets/icon.icns", "assets/icon.ico", "assets/full_icon_128x128.png"]
