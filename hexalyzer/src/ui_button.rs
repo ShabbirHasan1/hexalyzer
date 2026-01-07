@@ -75,7 +75,7 @@ pub fn tab_style_button<R>(
     let response = egui::Frame::new()
         .fill(fill)
         .corner_radius(4.0)
-        .inner_margin(egui::Margin::symmetric(8, 4))
+        .inner_margin(egui::Margin::symmetric(6, 4))
         .show(ui, |ui| {
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 8.0;

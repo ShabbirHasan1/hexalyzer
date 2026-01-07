@@ -19,7 +19,7 @@ pub struct IntelHex {
     pub filepath: PathBuf,
     /// Intel HEX file size in bytes
     pub size: usize,
-    /// Start address of the Intel HEX file
+    /// Start address of the Intel HEX file (stores full record as String)
     pub start_addr: String,
     /// Maximum payload size for data records
     max_payload_size: usize,
@@ -109,7 +109,7 @@ impl IntelHex {
                         addr += 1;
                     }
                 }
-                RecordType::EndOfFile => {} // TODO: hex has to end with EOF record
+                RecordType::EndOfFile => {}
                 RecordType::ExtendedSegmentAddress => {
                     self.offset = (record.data[0] as usize * 256 + record.data[1] as usize) * 16;
                 }
@@ -277,7 +277,6 @@ impl IntelHex {
         let mut writer = std::io::BufWriter::new(file);
 
         // Write start address record
-        // TODO: place it - start or end of file?
         if !self.start_addr.is_empty() {
             writeln!(writer, "{}", self.start_addr)?;
         }
@@ -629,11 +628,12 @@ impl IntelHex {
     /// assert_eq!(ih.get_byte(0x1234), Some(250));
     /// ```
     pub fn relocate(&mut self, new_start_address: usize) -> Result<(), IntelHexError> {
-        let min_addr = self.get_min_addr().ok_or(IntelHexError::UpdateError(
-            IntelHexErrorKind::IntelHexInstanceEmpty,
-        ))?;
-
-        // TODO: check max addr < u32 max after conversion
+        let (min_addr, max_addr) =
+            self.get_min_addr()
+                .zip(self.get_max_addr())
+                .ok_or(IntelHexError::UpdateError(
+                    IntelHexErrorKind::IntelHexInstanceEmpty,
+                ))?;
 
         if new_start_address > u32::MAX as usize {
             return Err(IntelHexError::UpdateError(
@@ -641,11 +641,18 @@ impl IntelHex {
             ));
         }
 
-        let offset = (new_start_address as i64 - min_addr as i64) as isize;
+        let offset = new_start_address as i64 - min_addr as i64;
+
+        if max_addr as i64 + offset > i64::from(u32::MAX) {
+            let max_allowed_start_address = u32::MAX - max_addr as u32 + min_addr as u32;
+            return Err(IntelHexError::UpdateError(
+                IntelHexErrorKind::RelocateAddressOverflow(max_allowed_start_address as usize),
+            ));
+        }
 
         self.buffer = std::mem::take(&mut self.buffer)
             .into_iter()
-            .map(|(addr, byte)| ((addr as isize + offset) as usize, byte))
+            .map(|(addr, byte)| ((addr as i64 + offset) as usize, byte))
             .collect();
 
         Ok(())

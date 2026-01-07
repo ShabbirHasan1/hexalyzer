@@ -43,12 +43,15 @@ impl HexViewerApp {
                         if ui.button("Export").clicked()
                             && let Some(curr_session) = self.get_curr_session_mut()
                             && curr_session.ih.size != 0
-                            && let Some(path) = rfd::FileDialog::new()
+                            && let Some(mut path) = rfd::FileDialog::new()
                                 .set_title("Save As")
-                                .add_filter("Binary", &["bin"])
-                                .add_filter("Hex", &["hex"])
+                                .set_file_name(curr_session.name.clone())
                                 .save_file()
                         {
+                            if path.extension().is_none() {
+                                path.set_extension("bin");
+                            }
+
                             let format = format_from_extension(&path).unwrap_or(SaveFormat::Bin);
 
                             let res: Result<(), Box<dyn Error>> = match format {

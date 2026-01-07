@@ -162,7 +162,7 @@ impl HexSession {
                 self.highlight_widget(ui, &button, addr, is_selected);
 
                 // Add space every 8 bytes
-                if (addr + 1) % 8 == 0 {
+                if (addr - start + 1).is_multiple_of(8) {
                     ui.add_space(5.0);
                 }
             }

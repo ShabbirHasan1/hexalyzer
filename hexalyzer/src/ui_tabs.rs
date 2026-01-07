@@ -60,8 +60,13 @@ impl HexViewerApp {
                                 let truncated_name = egui::RichText::new(&session.name);
                                 ui.add(egui::Label::new(truncated_name).truncate());
 
-                                // Close button
-                                ui.button("×").clicked()
+                                // Close button (with a transparent background)
+                                ui.scope(|ui| {
+                                    ui.visuals_mut().widgets.inactive.weak_bg_fill =
+                                        egui::Color32::TRANSPARENT;
+                                    ui.button("×").clicked()
+                                })
+                                .inner
                             });
 
                         if close_clicked {

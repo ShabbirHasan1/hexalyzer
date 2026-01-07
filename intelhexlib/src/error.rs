@@ -73,6 +73,8 @@ pub enum IntelHexErrorKind {
     DuplicateStartAddress,
     /// `IntelHex` instance has no data
     IntelHexInstanceEmpty,
+    /// Address relocation failed due to overflow
+    RelocateAddressOverflow(usize),
 }
 
 impl fmt::Display for IntelHexErrorKind {
@@ -99,11 +101,11 @@ impl fmt::Display for IntelHexErrorKind {
             Self::RecordAddressInvalidForType(rtype, expected, actual) => {
                 write!(
                     f,
-                    "For record type {rtype:?} expected address is {expected}, found {actual}"
+                    "For record type {rtype:?} expected address is 0x{expected:X}, found 0x{actual:X}"
                 )
             }
             Self::RecordAddressOverlap(address) => {
-                write!(f, "Encountered duplicate address {address}")
+                write!(f, "Encountered duplicate address: 0x{address:X}")
             }
             Self::InvalidRecordType => {
                 write!(f, "Invalid record type")
@@ -111,7 +113,7 @@ impl fmt::Display for IntelHexErrorKind {
             Self::RecordChecksumMismatch(expected, actual) => {
                 write!(
                     f,
-                    "Invalid record checksum - expected: {expected}, found: {actual}"
+                    "Invalid record checksum - expected: 0x{expected:02X}, found: 0x{actual:02X}"
                 )
             }
             Self::RecordInvalidPayloadLength => {
@@ -124,13 +126,19 @@ impl fmt::Display for IntelHexErrorKind {
                 write!(f, "Record not supported")
             }
             Self::InvalidAddress(address) => {
-                write!(f, "No data found at address {address}")
+                write!(f, "No data found at address: 0x{address:X}")
             }
             Self::DuplicateStartAddress => {
                 write!(f, "Encountered second start address record")
             }
             Self::IntelHexInstanceEmpty => {
                 write!(f, "IntelHex instance has no data")
+            }
+            Self::RelocateAddressOverflow(address) => {
+                write!(
+                    f,
+                    "Address relocation failed due to overflow. Max allowed start address: 0x{address:X}"
+                )
             }
         }
     }
