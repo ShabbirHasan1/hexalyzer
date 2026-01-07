@@ -95,14 +95,3 @@ fn load_icon() -> egui::IconData {
         height: 128,
     }
 }
-
-// TODO for MVP:
-// Verify export works OK
-// Polish up code
-// Add documentation
-
-// TODO further:
-// Use LayoutJob or other methods to do custom bytes display instead of widget (BIG TASK)
-// Prefetch the visible window into a Vec and render from that cache.
-// Instead of rendering gaps fully, use egui Separator or other thing to show the address gap
-// Ctrl + C / Z
