@@ -2,6 +2,7 @@ use crate::HexViewerApp;
 use crate::app::colors;
 use crate::events::collect_ui_events;
 use eframe::egui;
+
 //  ========================== Popup Type logic ============================= //
 
 #[derive(Clone, PartialEq, Eq)]
@@ -78,6 +79,14 @@ impl HexViewerApp {
                 "https://github.com/iharhl/hexalyzer",
             );
 
+            ui.add_space(3.0);
+            ui.separator();
+            ui.add_space(3.0);
+
+            ui.label(format!(
+                "v{} | Copyright (c) 2026 Ihar Hlukhau",
+                env!("CARGO_PKG_VERSION")
+            ));
             ui.add_space(5.0);
         });
 
