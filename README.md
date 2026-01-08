@@ -1,7 +1,6 @@
 <div align="center">
-    <img src="hexalyzer/assets/icon_128x128_win.png" alt="Hexalyzer Icon" width="100" height="100">
-    <br />  
-    <font size="6"><b>Hexalyzer</b></font>
+  <img src="hexalyzer/assets/icon_128x128_win.png" width="100" />
+  <h1>Hexalyzer</h1>
 </div>
 
 Hexalyzer is an app for inspecting and modifying firmware files and binary data.
