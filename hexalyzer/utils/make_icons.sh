@@ -26,7 +26,3 @@ magick "$ASSETS_DIR/doc_icon_128x128.png" "$ASSETS_DIR/icon_mac.rgba"
 
 magick convert "$ASSETS_DIR/icon_1024x1024.png" -define icon:auto-resize=256,128,64,48,32,16 "$ASSETS_DIR/icon.ico"
 magick "$ASSETS_DIR/full_icon_128x128.png" "$ASSETS_DIR/icon_win.rgba"
-
-
-# NOTE: cd into hexalyzer and do the app release:
-# cargo bundle --release

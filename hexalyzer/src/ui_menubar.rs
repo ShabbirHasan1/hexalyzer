@@ -32,7 +32,7 @@ impl HexViewerApp {
                     // FILE MENU
                     ui.menu_button("File", |ui| {
                         // OPEN BUTTON
-                        if ui.button("Open").clicked()
+                        if ui.button("Open file...").clicked()
                             && let Some(path) =
                                 rfd::FileDialog::new().set_title("Open File").pick_file()
                         {
@@ -40,7 +40,7 @@ impl HexViewerApp {
                         }
 
                         // EXPORT BUTTON
-                        if ui.button("Export").clicked()
+                        if ui.button("Export file...").clicked()
                             && let Some(curr_session) = self.get_curr_session_mut()
                             && curr_session.ih.size != 0
                             && let Some(mut path) = rfd::FileDialog::new()
@@ -75,7 +75,7 @@ impl HexViewerApp {
                     // EDIT BUTTON
                     ui.menu_button("Edit", |ui| {
                         // READDRESS BUTTON
-                        if ui.button("Re-address").clicked()
+                        if ui.button("Relocate...").clicked()
                             && let Some(curr_session) = self.get_curr_session()
                             && curr_session.ih.size != 0
                         {
@@ -84,7 +84,7 @@ impl HexViewerApp {
                         }
 
                         // RESTORE BUTTON
-                        if ui.button("Restore changes").clicked()
+                        if ui.button("Restore byte changes").clicked()
                             && let Some(curr_session) = self.get_curr_session_mut()
                             && curr_session.ih.size != 0
                         {

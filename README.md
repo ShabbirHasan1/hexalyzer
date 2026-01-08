@@ -10,8 +10,7 @@ Hexalyzer project contains two main parts:
 
 ## Installation
 
-Use [cargo packager](https://crates.io/crates/cargo-packager) to build an installer
-for your platform.
+Use [cargo packager](https://crates.io/crates/cargo-packager) to build an installer for your platform.
 
 Go into hexalyzer directory `cd hexalyzer` and run:
 1. `cargo build --release`
@@ -21,6 +20,17 @@ This will create `.exe` installer for Windows, and `.dmg` installer for
 macOS. Linux was not tested but should work too.
 
 When the tag is available, the installers will be attached.
+
+### Notes for Windows
+
+I had bunch of issues with generating Windows installer and the
+final executable correctly. Before building, you need to run 
+`cargo add --build winresource` which helps setup the icon on the
+executable.
+
+In addition, if you want to install the app in certain folders, e.g.,
+`C:\Program Files\Hexalyzer`, you need to run the installer with
+admin rights, the same goes for uninstalling.
 
 
 ## Usage
