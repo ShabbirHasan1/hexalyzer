@@ -1,15 +1,26 @@
 # Hexalyzer
 
-Hexalyzer is an app for viewing and modifying HEX and BIN files.
+Hexalyzer is an app for viewing and modifying HEX files. Any binary encoded file
+can technically be opened as well.
 
 Hexalyzer project contains two main parts:
-- A modern GUI application that can display and edit contents of HEX and BIN files
-- A standalone Intel HEX parsing library
+- A modern GUI application that can display and edit contents of HEX and BIN files.
+- A standalone Intel HEX parsing library.
 
 
 ## Installation
 
-TBD
+Use [cargo packager](https://crates.io/crates/cargo-packager) to build an installer
+for your platform.
+
+Go into hexalyzer directory `cd hexalyzer` and run:
+1. `cargo build --release`
+2. `cargo packager --release`
+
+This will create `.exe` installer for Windows, and `.dmg` installer for
+macOS. Linux was not tested but should work too.
+
+When the tag is available, the installers will be attached.
 
 
 ## Usage
@@ -51,6 +62,8 @@ cell via math on mouse position instead of individual widgets.
 - Impact: although it is used in some other hex viewer apps, it is not ideal for UX.
 
 - Fix: compress gaps into a separator. The problem is that jump/search/etc offset calculations have to be adjusted accordingly.
+
+4. Tabs are hacky to say the least...
 
 
 ### Architectural weaknesses

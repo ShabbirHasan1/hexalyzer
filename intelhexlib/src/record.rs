@@ -408,9 +408,15 @@ mod tests {
             // Removed ':' from record str
             ("00000001FF", IntelHexErrorKind::MissingStartCode),
             // Payload shorter that record length byte
-            (":100000000000FF", IntelHexErrorKind::RecordInvalidPayloadLength),
+            (
+                ":100000000000FF",
+                IntelHexErrorKind::RecordInvalidPayloadLength,
+            ),
             // Payload longer that record length byte
-            (":02000000000000FF", IntelHexErrorKind::RecordInvalidPayloadLength),
+            (
+                ":02000000000000FF",
+                IntelHexErrorKind::RecordInvalidPayloadLength,
+            ),
             // EOF record with fewer chars
             (":0000FF", IntelHexErrorKind::RecordTooShort),
             // EOF record with extra '0' added

@@ -6,7 +6,6 @@
     clippy::expect_used,
     clippy::panic
 )]
-
 // Tell OS to hide the console window when running.
 // This attribute is only applied if the target OS is Windows.
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -52,9 +51,14 @@ impl eframe::App for HexViewerApp {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         #[cfg(debug_assertions)]
         {
+            // Track FPS
             let dt = ctx.input(|i| i.stable_dt);
             let fps = if dt > 0.0 { 1.0 / dt } else { 0.0 };
             println!("FPS: {fps:.1}");
+
+            // Display dimensions of UI elements on hover.
+            // Uncomment if needed.
+            // ctx.set_debug_on_hover(true);
         }
 
         self.show_menu_bar(ctx);

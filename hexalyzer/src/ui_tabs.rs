@@ -3,6 +3,7 @@ use crate::ui_button;
 use eframe::egui;
 
 impl HexViewerApp {
+    #[allow(clippy::cast_precision_loss)]
     /// Show tabs with the list of open files.
     /// Tabs are constrained to fit into the available space.
     /// If the number of tabs does not exceed the maximum allowed, the "Open New File" tab is added.
@@ -27,7 +28,7 @@ impl HexViewerApp {
                         ui.visuals().widgets.active.text_color(),
                     );
                     let text_width = galley.size().x;
-                    let ideal_w = text_width + 45.0; // 45px for margins and "×" button
+                    let ideal_w = text_width + 32.0; // 32px for margins and "×" button
                     ideal_widths.push(ideal_w);
                 }
 
@@ -35,13 +36,22 @@ impl HexViewerApp {
                 let add_button_width = if self.sessions.len() < self.max_tabs {
                     70.0
                 } else {
-                    40.0
+                    35.0 // still leave some margin
                 };
-                let available_width = ui.available_width() - add_button_width;
+
+                // Total space taken by the gaps between tabs
+                let total_spacing = spacing * (self.sessions.len() as f32);
+
+                // Get width available for tabs
+                let available_width = ui.available_width() - add_button_width - total_spacing;
+
+                // Get ideal width for all tabs
                 let total_ideal_width: f32 = ideal_widths.iter().sum();
+
                 // Only scale down if we actually exceed the available space
+                // Scale to the closest .05 downwards
                 let scale_factor = if total_ideal_width > available_width {
-                    available_width / total_ideal_width
+                    (available_width / total_ideal_width * 30.0).floor() / 30.0
                 } else {
                     1.0
                 };
@@ -52,29 +62,32 @@ impl HexViewerApp {
                     // Get width for this tab, scaled by the scaling factor
                     let dynamic_width = ideal_widths[i] * scale_factor;
 
-                    // Create a constrained UI for each tab (to fit all tabs into the tab bar)
-                    ui.allocate_ui(egui::vec2(dynamic_width, ui.available_height()), |ui| {
-                        let (response, close_clicked) =
-                            ui_button::tab_style_button(ui, ("tab", i), is_active, |ui| {
-                                // Truncate the name if it is too long for the calculated width
-                                let truncated_name = egui::RichText::new(&session.name);
-                                ui.add(egui::Label::new(truncated_name).truncate());
+                    // Create a tab
+                    let (response, close_clicked) = ui_button::tab_style_button(
+                        ui,
+                        ("tab", i),
+                        is_active,
+                        dynamic_width,
+                        |ui| {
+                            // Truncate the name if it is too long for the calculated width
+                            let name = egui::RichText::new(&session.name);
+                            ui.add(egui::Label::new(name).truncate());
 
-                                // Close button (with a transparent background)
-                                ui.scope(|ui| {
-                                    ui.visuals_mut().widgets.inactive.weak_bg_fill =
-                                        egui::Color32::TRANSPARENT;
-                                    ui.button("×").clicked()
-                                })
-                                .inner
-                            });
+                            // Close button (with a transparent background)
+                            ui.scope(|ui| {
+                                ui.visuals_mut().widgets.inactive.weak_bg_fill =
+                                    egui::Color32::TRANSPARENT;
+                                ui.button("×").clicked()
+                            })
+                            .inner
+                        },
+                    );
 
-                        if close_clicked {
-                            tab_to_close = Some(i);
-                        } else if response.clicked() {
-                            self.active_index = Some(i);
-                        }
-                    });
+                    if close_clicked {
+                        tab_to_close = Some(i);
+                    } else if response.clicked() {
+                        self.active_index = Some(i);
+                    }
                 }
 
                 // Handle closing tabs after the loop to avoid borrow checker issues
@@ -84,9 +97,10 @@ impl HexViewerApp {
 
                 // "Open New File" tab button
                 if self.sessions.len() < self.max_tabs {
-                    let (response, ()) = ui_button::tab_style_button(ui, "add_tab", false, |ui| {
-                        ui.label(egui::RichText::new(" + ").strong());
-                    });
+                    let (response, ()) =
+                        ui_button::tab_style_button(ui, "add_tab", false, 0.0, |ui| {
+                            ui.label(egui::RichText::new(" + ").strong());
+                        });
                     if response.on_hover_text("Open New File").clicked()
                         && let Some(path) =
                             rfd::FileDialog::new().set_title("Open File").pick_file()

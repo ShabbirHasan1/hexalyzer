@@ -40,6 +40,7 @@ pub fn tab_style_button<R>(
     ui: &mut egui::Ui,
     id_source: impl std::hash::Hash,
     is_active: bool,
+    fixed_width: f32,
     add_contents: impl FnOnce(&mut egui::Ui) -> R,
 ) -> (egui::Response, R) {
     // Define colors
@@ -77,6 +78,10 @@ pub fn tab_style_button<R>(
         .corner_radius(4.0)
         .inner_margin(egui::Margin::symmetric(6, 4))
         .show(ui, |ui| {
+            if fixed_width > 0.0 {
+                ui.set_width(fixed_width - 12.0); // 12.0 is the horizontal inner_margin (6*2)
+            }
+
             ui.horizontal(|ui| {
                 ui.spacing_mut().item_spacing.x = 8.0;
 

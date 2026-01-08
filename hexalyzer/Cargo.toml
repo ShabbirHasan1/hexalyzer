@@ -14,6 +14,7 @@ identifier = "com.github.iharhl.hexalyzer"
 description = "IntelHex viewer and editor app"
 authors = ["Ihar Hlukhau | ihluk@outlook.com"]
 copyright = "Copyright © 2026"
-
-# Icons for all platforms
 icons = ["assets/icon.icns", "assets/icon.ico", "assets/full_icon_128x128.png"]
+
+[package.metadata.packager.nsis]
+installer_mode = "perMachine"

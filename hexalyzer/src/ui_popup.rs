@@ -66,7 +66,7 @@ impl HexViewerApp {
             ui.add_space(3.0);
 
             ui.label(
-                "The app is built with *egui* - immediate-mode GUI library. \
+                "The app is built with egui - immediate-mode GUI library. \
             The hex parsing and writing is handled by IntelHex library, built as part of the \
             same project.\n\nThe app does not support partial file loading (yet?) so RAM usage \
             while working with very large files will be high.",
