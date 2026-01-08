@@ -80,28 +80,82 @@ Switch between displaying 16 or 32 bytes per row.
 Displays version information and credits for the Hexalyzer project.
 
 
+## IntelHexLib
+
+The core of Hexalyzer is powered by a standalone Intel HEX parsing library. It is designed to
+handle memory-sparse firmware files using a BTreeMap buffer.
+
+### Key Features
+
+- **Sparse Data Support**: Uses `BTreeMap<usize, u8>` to store data, meaning files with large gaps 
+between memory segments don't consume unnecessary RAM.
+
+- **Data editing**: Allows updating single bytes, byte slices, and supports relocation to a new
+start address.
+
+- **Flexible API**: Allows for easy parsing and update of hex data as well as straightforward
+integration into other projects.
+
+### Usage Example
+
+```rust
+use hexalyzer::intelhex::IntelHex;
+use std::path::PathBuf;
+
+fn main() {
+    // Load and parse a file
+    let path = PathBuf::from("firmware.hex");
+    if let Ok(mut ih) = IntelHex::from_hex(&path) {
+        println!("Loaded {} bytes from {:?}", ih.size, ih.filepath);
+        
+        // Access data at a specific address
+        let address: usize = 0x0800_0000;
+        if let Some(byte) = ih.get_byte(address) {
+            println!("Byte at {:X}: {:02X}", address, byte);
+        }
+
+        // Update data at a specific address
+        let new_value = 0x0F;
+        let res = ih.update_byte(address, new_value);
+        if res.is_ok() {
+            println!("Updated byte at {:X} to: {:02X}", address, new_value);
+        } else {
+            println!("Error during update: {:?}", res.unwrap_err().to_string())
+        }
+
+        // Iterate over contiguous segments
+        // Since it uses a BTreeMap, keys are always sorted by address
+        for (addr, byte) in ih.iter().take(10) {
+            println!("{:X}: {:02X}", addr, byte);
+        }
+    }
+}
+```
+
+
 ## History
 
 v0.1.0 (2026-xx-xx) - Initial Release
 
 
-## Future improvements
+## Potential app improvements
 
 ### UX and performance improvements to the app
 
 1. Per-frame allocations in the hex grid
 
-- Issue: app creates 16/32 `Button`s + 16/32 `Label`s per row; each byte formats strings (`format!("{:02X}")`); search, 
-edits, etc. copy data around.
+- Issue: app creates 16/32 `Button`s + 16/32 `Label`s per row; each byte formats strings (`format!("{:02X}")`);
+search, edits, etc. copy data around.
 
 - Impact: hundreds of widgets and heap allocations per frame → high CPU pressure.
 
-- Potential fix: render whole row as a single galley (`LayoutJob`) for hex and another for ASCII; detect hovered/selected 
-cell via math on mouse position instead of individual widgets.
+- Potential fix: render whole row as a single galley (`LayoutJob`) for hex and another for ASCII; detect
+hovered/selected cell via math on mouse position instead of individual widgets.
 
 2. BTreeMap lookups in a tight render loop
 
-- Issue: `ui_centralpanel.rs` repeatedly calls `ih.get_byte(addr)` per cell (`BTreeMap::get` has O(log n) time complexity).
+- Issue: `ui_centralpanel.rs` repeatedly calls `ih.get_byte(addr)` per cell (`BTreeMap::get` has O(log n) time
+complexity).
 
 - Impact: multiplied across all visible bytes each frame → wastes CPU.
 
@@ -113,7 +167,8 @@ cell via math on mouse position instead of individual widgets.
 
 - Impact: although it is used in some other hex viewer apps, it is not ideal for UX.
 
-- Fix: compress gaps into a separator. The problem is that jump/search/etc offset calculations have to be adjusted accordingly.
+- Fix: compress gaps into a separator. The problem is that jump/search/etc offset calculations have to be
+adjusted accordingly.
 
 4. Tabs are hacky to say the least...
 
@@ -122,19 +177,19 @@ cell via math on mouse position instead of individual widgets.
 
 1. Data representated as `BTreeMap<usize, u8>`
 
-- Memory-heavy and slow for contiguous data. Typical firmware is largely contiguous; a byte-per-node map scales poorly 
-beyond ~100–300k bytes.
+- Memory-heavy and slow for contiguous data. Typical firmware is largely contiguous; a byte-per-node map scales
+poorly beyond ~100–300k bytes.
 
-- Possible solution: represent data as contiguous segments `BTreeMap<usize, Vec<u8>>`, where key is the offset (aka start 
-address of the contiguous segment) and value is the data vector.
+- Possible solution: represent data as contiguous segments `BTreeMap<usize, Vec<u8>>`, where key is the offset
+(aka start address of the contiguous segment) and value is the data vector.
 
 2. UI tightly couples rendering and model details
 
-- HexSession owns data, selection, editing, search, and paints per-byte widgets directly. Harder to unit test, refactor
-and optimize.
+- HexSession owns data, selection, editing, search, and paints per-byte widgets directly. Harder to unit test, 
+refactor and optimize.
 
-- Possible solution: introduce a ViewModel layer: compute a lightweight "visible page" (bytes, ascii, selection masks)
-separate from painting. The painter consumes this without hitting the data layer repeatedly.
+- Possible solution: introduce a ViewModel layer: compute a lightweight "visible page" (bytes, ascii, selection
+masks) separate from painting. The painter consumes this without hitting the data layer repeatedly.
 
 3. Synchronous tasks on the main thread
 
