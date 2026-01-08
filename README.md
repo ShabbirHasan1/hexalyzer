@@ -1,11 +1,17 @@
-# Hexalyzer
+<div align="center">
+    <img src="hexalyzer/assets/icon_128x128_win.png" alt="Hexalyzer Icon" width="100" height="100">
+    <br />  
+    <font size="6"><b>Hexalyzer</b></font>
+</div>
 
-Hexalyzer is an app for viewing and modifying HEX files. Any binary encoded file
-can technically be opened as well.
+Hexalyzer is an app for inspecting and modifying firmware files and binary data.
+Any hex or binary encoded file can technically be opened.
 
 Hexalyzer project contains two main parts:
 - A modern GUI application that can display and edit contents of HEX and BIN files.
 - A standalone Intel HEX parsing library.
+
+![Hexalyzer app preview](docs/hexalyzer-ex.png)
 
 
 ## Installation
@@ -35,7 +41,44 @@ admin rights, the same goes for uninstalling.
 
 ## Usage
 
-TBD
+### Getting started
+
+1. **Open a File**: Use the `File → Open File...` menu or drag and drop a `.hex` or `.bin` 
+file into the main window.
+
+2. **Navigate**: Use the scroll area to browse the data. The center panel displays the
+hex values and their ASCII equivalents side-by-side. Use side panel to jump to a specific
+hex address or search for a byte / ASCII value(s).
+
+3. **Edit**: Click on a byte to edit its value. Changes are tracked and can be reverted
+if needed.
+
+4. **Inspect**: Use the side panel to see how the selected bytes are interpreted as
+different data types (integers, floats, etc.). Multibyte selection is possible!
+
+### Menu options
+
+The top menubar provides access to the core file management and data transformation
+tools:
+
+#### File
+
+1. `Open file...`: Browse your system to load a file into a new tab.
+2. `Export file...`: Save your current session to a new file.
+3. `Close file`: Close the current tab.
+
+#### Edit
+
+1. `Relocate...`: Relocate the current file to a new start address.
+2. `Restore byte changes`: Discard all changes made to the current file.
+
+#### View
+
+Switch between displaying 16 or 32 bytes per row.
+
+#### About
+
+Displays version information and credits for the Hexalyzer project.
 
 
 ## History
@@ -106,3 +149,4 @@ separate from painting. The painter consumes this without hitting the data layer
 2. Support ELF format
 3. Show the current address of the selected byte
 4. Add timestamp (time since epoch) type in the data inspector
+5. Saving an entire app state / session?

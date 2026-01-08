@@ -64,7 +64,7 @@ impl HexViewerApp {
                         }
 
                         // CLOSE BUTTON
-                        if ui.button("Close").clicked()
+                        if ui.button("Close file").clicked()
                             && let Some(curr_session_id) = self.active_index
                             && let Some(_) = self.get_curr_session()
                         {
