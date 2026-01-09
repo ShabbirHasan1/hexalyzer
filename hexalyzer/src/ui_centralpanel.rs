@@ -173,7 +173,7 @@ impl HexSession {
             // ASCII representation row
             for addr in start..end {
                 // Spacing between ascii labels
-                ui.spacing_mut().item_spacing.x = 2.0;
+                ui.spacing_mut().item_spacing.x = 1.0;
 
                 // Determine display char
                 let byte = self.ih.get_byte(addr);
@@ -183,11 +183,14 @@ impl HexSession {
                 let is_selected = byte.is_some() && self.selection.is_addr_within_range(addr);
 
                 // Show char as label
-                let label = ui.add(egui::Label::new(
-                    egui::RichText::new(ch.to_string())
-                        .color(colors::GRAY_160)
-                        .monospace(),
-                ));
+                let label = ui.add(
+                    egui::Label::new(
+                        egui::RichText::new(ch.to_string())
+                            .color(colors::GRAY_160)
+                            .monospace(),
+                    )
+                    .selectable(false),
+                );
 
                 // Update the selection range
                 if pointer_down
