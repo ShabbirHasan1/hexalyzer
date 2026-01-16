@@ -244,7 +244,7 @@ impl IntelHex {
         filepath: P,
         base_address: usize,
     ) -> Result<(), Box<dyn Error>> {
-        // Read contents of the file. Bin only contains data bytes, thus read as Vec<u8>.
+        // Read the contents of the file
         let data = std::fs::read(&filepath)?;
 
         // Clear provided IntelHex instance

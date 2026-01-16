@@ -7,3 +7,15 @@ license.workspace = true
 [lib]
 name = "intelhexlib"
 path = "src/lib.rs"
+
+[dev-dependencies]
+criterion = { version = "0.8.1", features = ["html_reports"] }
+
+[[bench]]
+name = "benchmark"
+harness = false
+
+[profile.bench]
+inherits = "release"
+lto = true
+codegen-units = 1
