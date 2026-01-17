@@ -16,7 +16,6 @@ fn bench_parsing(c: &mut Criterion) {
     });
 
     c.bench_function("load_hex", |b| {
-
         b.iter(|| {
             let mut ih = IntelHex::new();
             ih.load_hex(std::hint::black_box(&input_path))
@@ -25,15 +24,11 @@ fn bench_parsing(c: &mut Criterion) {
         });
     });
 
-
-
     c.bench_function("load_bin", |b| {
         b.iter(|| {
             let mut ih = IntelHex::new();
-            ih.load_bin(
-                std::hint::black_box("tests/fixtures/ih_valid_1.bin"),
-                0xF0
-            ).expect("Failed to load bin file");
+            ih.load_bin(std::hint::black_box("tests/fixtures/ih_valid_1.bin"), 0xF0)
+                .expect("Failed to load bin file");
             std::hint::black_box(ih);
         });
     });
