@@ -227,7 +227,8 @@ impl Record {
         // Avoids heap allocations of Vec.
         let mut decoded_hex_buf = [0u8; sizes::LARGEST_RECORD_HEX];
 
-        // Decode hex digits into buffer
+        // Decode hex digits into the buffer.
+        // No need to check validity during fast_decode as it is checked above.
         for (count, i) in (1..hex_len).step_by(2).enumerate() {
             decoded_hex_buf[count] = fast_decode(line[i], line[i + 1]);
         }
@@ -453,40 +454,22 @@ mod tests {
 
     #[test]
     fn test_parse_valid_record_types() {
-        assert_eq!(RecordType::parse("00"), Ok(RecordType::Data));
-        assert_eq!(RecordType::parse("01"), Ok(RecordType::EndOfFile));
-        assert_eq!(
-            RecordType::parse("02"),
-            Ok(RecordType::ExtendedSegmentAddress)
-        );
-        assert_eq!(RecordType::parse("03"), Ok(RecordType::StartSegmentAddress));
-        assert_eq!(
-            RecordType::parse("04"),
-            Ok(RecordType::ExtendedLinearAddress)
-        );
-        assert_eq!(RecordType::parse("05"), Ok(RecordType::StartLinearAddress));
+        assert_eq!(RecordType::parse(0), Ok(RecordType::Data));
+        assert_eq!(RecordType::parse(1), Ok(RecordType::EndOfFile));
+        assert_eq!(RecordType::parse(2), Ok(RecordType::ExtendedSegmentAddress));
+        assert_eq!(RecordType::parse(3), Ok(RecordType::StartSegmentAddress));
+        assert_eq!(RecordType::parse(4), Ok(RecordType::ExtendedLinearAddress));
+        assert_eq!(RecordType::parse(5), Ok(RecordType::StartLinearAddress));
     }
 
     #[test]
     fn test_parse_invalid_record_type() {
         assert_eq!(
-            RecordType::parse("0"),
+            RecordType::parse(0xFF),
             Err(IntelHexErrorKind::InvalidRecordType)
         );
         assert_eq!(
-            RecordType::parse("1"),
-            Err(IntelHexErrorKind::InvalidRecordType)
-        );
-        assert_eq!(
-            RecordType::parse("06"),
-            Err(IntelHexErrorKind::InvalidRecordType)
-        );
-        assert_eq!(
-            RecordType::parse("AB"),
-            Err(IntelHexErrorKind::InvalidRecordType)
-        );
-        assert_eq!(
-            RecordType::parse("FF"),
+            RecordType::parse(6),
             Err(IntelHexErrorKind::InvalidRecordType)
         );
     }
@@ -508,19 +491,9 @@ mod tests {
     }
 
     #[test]
-    fn test_calculate_checksum_from_self() {
-        for (record, _) in get_valid_records() {
-            assert_eq!(
-                record.checksum,
-                Record::calculate_checksum_from_self(&record)
-            );
-        }
-    }
-
-    #[test]
     fn test_parse_valid_records() {
         for (rec, rec_str) in get_valid_records() {
-            assert_eq!(Record::parse(rec_str), Ok(rec));
+            assert_eq!(Record::parse(rec_str.as_bytes()), Ok(rec));
         }
     }
 
@@ -528,7 +501,7 @@ mod tests {
     fn test_parse_invalid_records() {
         let records_and_errors = get_invalid_str_records();
         for (record, expected_error) in records_and_errors {
-            assert_eq!(Record::parse(record), Err(expected_error));
+            assert_eq!(Record::parse(record.as_bytes()), Err(expected_error));
         }
     }
 
@@ -620,5 +593,13 @@ mod tests {
                 )
             ))
         );
+    }
+
+    #[test]
+    fn test_fast_decode() {
+        assert_eq!(fast_decode(b'0', b'0'), 0x00);
+        assert_eq!(fast_decode(b'F', b'A'), 0xFA);
+        assert_eq!(fast_decode(b'0', b'f'), 0x0F);
+        assert_eq!(fast_decode(b'c', b'C'), 0xCC);
     }
 }

@@ -378,7 +378,7 @@ impl IntelHex {
             writeln!(writer)?;
         }
 
-        let mut curr_high_addr: Option<u16> = None;
+        let mut curr_high_addr = 0u16;
 
         for (&block_start_addr, data) in &self.buffer {
             let mut block_offset = 0;
@@ -392,7 +392,7 @@ impl IntelHex {
                 let low_addr = (addr & 0xFFFF) as u16;
 
                 // If ELA segment changed -> emit ELA record
-                if curr_high_addr != Some(high_addr) {
+                if curr_high_addr != high_addr {
                     let msb = (high_addr >> 8) as u8;
                     let lsb = (high_addr & 0xFF) as u8;
 
@@ -400,7 +400,7 @@ impl IntelHex {
 
                     writeln!(writer, "{record}")?;
 
-                    curr_high_addr = Some(high_addr);
+                    curr_high_addr = high_addr;
                 }
 
                 // Determine how many bytes can fit in this record
@@ -509,10 +509,11 @@ impl IntelHex {
     ///
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     ///
-    /// let mut map_iter: btree_map::Iter<'_, usize, u8> = ih.iter();
-    /// let (first_key, first_value) = map_iter.next().unwrap();
+    /// let mut chunk_iter = ih.iter();
+    /// let (first_key, first_chunk) = chunk_iter.next().unwrap();
     ///
-    /// assert_eq!((*first_key, *first_value), (0, 250));
+    /// assert_eq!(*first_key, 0);
+    /// assert_eq!(*first_chunk, vec![0xFA, 0x00, 0x00, 0x02]);
     /// ```
     pub fn iter(&self) -> std::collections::btree_map::Iter<'_, usize, Vec<u8>> {
         self.into_iter()
@@ -527,10 +528,10 @@ impl IntelHex {
     ///
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     ///
-    /// let mut byte_iter: impl Iterator<Item = (usize, u8)> = ih.bytes();
-    /// let (first_key, first_value) = byte_iter.next().unwrap();
+    /// let mut byte_iter = ih.bytes();
+    /// let (first_key, first_byte) = byte_iter.next().unwrap();
     ///
-    /// assert_eq!((*first_key, *first_value), (0, 250));
+    /// assert_eq!((first_key, first_byte), (0x00, 0xFA));
     /// ```
     pub fn bytes(&self) -> impl Iterator<Item = (usize, u8)> + '_ {
         self.buffer.iter().flat_map(|(&start_addr, data)| {
@@ -549,10 +550,10 @@ impl IntelHex {
     ///
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     ///
-    /// let mut byte_iter: impl Iterator<Item = (usize, u8)> = ih.into_bytes();
-    /// let (first_key, first_value) = byte_iter.next().unwrap();
+    /// let mut byte_iter = ih.into_bytes();
+    /// let (first_key, first_byte) = byte_iter.next().unwrap();
     ///
-    /// assert_eq!((*first_key, *first_value), (0, 250));
+    /// assert_eq!((first_key, first_byte), (0x00, 0xFA));
     /// ```
     pub fn into_bytes(self) -> impl Iterator<Item = (usize, u8)> {
         self.buffer.into_iter().flat_map(|(start_addr, data)| {
@@ -571,7 +572,7 @@ impl IntelHex {
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let min_addr: Option<usize> = ih.get_min_addr();
     ///
-    /// assert_eq!(min_addr, Some(0));
+    /// assert_eq!(min_addr, Some(0x0));
     /// ```
     #[must_use]
     pub fn get_min_addr(&self) -> Option<usize> {
@@ -605,7 +606,7 @@ impl IntelHex {
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let byte: u8 = ih.read_byte(0x0).unwrap();
     ///
-    /// assert_eq!(byte, 250);
+    /// assert_eq!(byte, 0xFA);
     /// ```
     #[must_use]
     pub fn read_byte(&self, address: usize) -> Option<u8> {
@@ -627,7 +628,7 @@ impl IntelHex {
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// let bytes: Vec<u8> = ih.read_range(0x0, 3).unwrap();
     ///
-    /// assert_eq!(bytes, &[250, 0, 0]);
+    /// assert_eq!(bytes, &[0xFA, 0x00, 0x00]);
     /// ```
     #[must_use]
     pub fn read_range(&self, start_addr: usize, len: usize) -> Option<Vec<u8>> {
@@ -655,9 +656,9 @@ impl IntelHex {
     /// use intelhexlib::IntelHex;
     ///
     /// let ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
-    /// let bytes: Vec<u8> = ih.read_range_safe(0x0, 3).unwrap();
+    /// let bytes: Vec<Option<u8>> = ih.read_range_safe(0x0, 5);
     ///
-    /// assert_eq!(bytes, &[250, 0, 0]);
+    /// assert_eq!(bytes, &[Some(0xFA), Some(0x00), Some(0x00), Some(0x02), None]);
     /// ```
     #[must_use]
     pub fn read_range_safe(&self, start_addr: usize, len: usize) -> Vec<Option<u8>> {
@@ -752,11 +753,11 @@ impl IntelHex {
     /// use std::io;
     ///
     /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
-    /// let res: Result<(), IntelHexError> = ih.update_buffer_slice(&[(0x0, 0xFF), (0x1, 0xFF), (0x2, 0xFF)]);
+    /// let res: Result<(), IntelHexError> = ih.update_slice(&[(0x0, 0xFF), (0x1, 0xFF), (0x2, 0xFF)]);
     ///
     /// assert!(res.is_ok());
     /// ```
-    pub fn update_buffer_slice(&mut self, update_map: &[(usize, u8)]) -> Result<(), IntelHexError> {
+    pub fn update_slice(&mut self, update_map: &[(usize, u8)]) -> Result<(), IntelHexError> {
         // First pass: Verify all addresses exist before modifying anything
         for &(addr, _) in update_map {
             let exists = self
@@ -866,8 +867,8 @@ impl IntelHex {
     /// let mut ih = IntelHex::from_hex("tests/fixtures/ih_valid_1.hex").unwrap();
     /// ih.relocate(0x1234);
     ///
-    /// assert_eq!(ih.get_byte(0), None);
-    /// assert_eq!(ih.get_byte(0x1234), Some(250));
+    /// assert_eq!(ih.read_byte(0x0000), None);
+    /// assert_eq!(ih.read_byte(0x1234), Some(0xFA));
     /// ```
     pub fn relocate(&mut self, new_start_address: usize) -> Result<(), IntelHexError> {
         let (min_addr, max_addr) =
@@ -936,30 +937,30 @@ mod tests {
     }
 
     #[test]
-    fn test_get_byte_valid() {
+    fn test_read_byte_valid() {
         // Arrange
         let mut ih = IntelHex::new();
         let addr = 0x1234;
         let value = 0xFF;
-        ih.buffer.insert(addr, value);
+        ih.buffer.insert(addr, vec![value]);
 
         // Act
-        let byte = ih.get_byte(addr);
+        let byte = ih.read_byte(addr);
 
         // Assert
         assert_eq!(byte, Some(value));
     }
 
     #[test]
-    fn test_get_byte_invalid() {
+    fn test_read_byte_invalid() {
         // Arrange
         let mut ih = IntelHex::new();
         let addr = 0x1234;
         let value = 0xFF;
-        ih.buffer.insert(addr, value);
+        ih.buffer.insert(addr, vec![value]);
 
         // Act
-        let byte = ih.get_byte(addr - 1);
+        let byte = ih.read_byte(addr - 1);
 
         // Assert
         assert!(byte.is_none());
@@ -967,7 +968,7 @@ mod tests {
 
     #[test]
     #[allow(clippy::cast_possible_truncation)]
-    fn test_get_buffer_slice_valid() {
+    fn test_read_range_valid() {
         // Arrange
         let mut ih = IntelHex::new();
 
@@ -975,49 +976,25 @@ mod tests {
         let length = 10;
 
         let mut addr_vec = Vec::with_capacity(length);
-        let mut expected_res_vec = Vec::with_capacity(length);
 
-        for addr in addr_start..=addr_start + length {
-            addr_vec.push(addr); // construct addr vector
-            ih.buffer.insert(addr, addr as u8); // insert key-value pair into the map
-            expected_res_vec.push(addr as u8); // push the value into expected result vec
+        for addr in addr_start..addr_start + length {
+            // construct data vector where each byte is a corresponding address
+            addr_vec.push(addr);
         }
 
+        ih.buffer
+            .insert(addr_start, addr_vec.iter().map(|&x| x as u8).collect());
+
         // Act
-        let res_vec: Option<Vec<u8>> = ih.get_buffer_slice(&addr_vec);
+        let res_vec: Option<Vec<u8>> = ih.read_range(addr_start, length);
 
         // Assert
-        assert_eq!(res_vec, Some(expected_res_vec));
+        assert_eq!(res_vec, Some(addr_vec.iter().map(|&x| x as u8).collect()));
     }
 
     #[test]
     #[allow(clippy::cast_possible_truncation)]
-    fn test_get_buffer_slice_with_gaps() {
-        // Arrange
-        let mut ih = IntelHex::new();
-
-        let addr_start = 16;
-        let length = 10;
-
-        let mut addr_vec = Vec::with_capacity(length);
-        let mut expected_res_vec = Vec::with_capacity(length);
-
-        for addr in addr_start..=addr_start + length {
-            addr_vec.push(addr * 2); // construct addr vector
-            ih.buffer.insert(addr * 2, addr as u8); // insert key-value pair into the map
-            expected_res_vec.push(addr as u8); // push the value into expected result vec
-        }
-
-        // Act
-        let res_vec: Option<Vec<u8>> = ih.get_buffer_slice(&addr_vec);
-
-        // Assert
-        assert_eq!(res_vec, Some(expected_res_vec));
-    }
-
-    #[test]
-    #[allow(clippy::cast_possible_truncation)]
-    fn test_get_buffer_slice_invalid() {
+    fn test_read_range_invalid() {
         // Arrange
         let mut ih = IntelHex::new();
 
@@ -1026,14 +1003,22 @@ mod tests {
 
         let mut addr_vec = Vec::with_capacity(length);
 
-        for addr in addr_start..=addr_start + length {
-            addr_vec.push(addr); // construct addr vector
-            ih.buffer.insert(addr, addr as u8); // insert key-value pair into the map
+        for addr in addr_start..addr_start + length {
+            // construct data vector where each byte is a corresponding address
+            addr_vec.push(addr);
         }
-        ih.buffer.pop_last(); // pop the last addr
+
+        ih.buffer.insert(
+            addr_start,
+            addr_vec
+                .iter()
+                .map(|&x| x as u8)
+                .take(length - 1) // skip last byte
+                .collect(),
+        );
 
         // Act
-        let res_vec: Option<Vec<u8>> = ih.get_buffer_slice(&addr_vec);
+        let res_vec: Option<Vec<u8>> = ih.read_range(addr_start, length);
 
         // Assert
         assert_eq!(res_vec, None);
@@ -1045,14 +1030,14 @@ mod tests {
         let mut ih = IntelHex::new();
         let addr = 0x1234;
         let value = 0xFF;
-        ih.buffer.insert(addr, value);
+        ih.buffer.insert(addr, vec![value]);
 
         // Act
         let res = ih.update_byte(addr, value - 1);
 
         // Assert
         assert!(res.is_ok());
-        assert_eq!(*ih.buffer.get(&addr).unwrap_or(&0), value - 1);
+        assert_eq!(*ih.buffer.get(&addr).unwrap_or(&vec![]), [value - 1]);
     }
 
     #[test]
@@ -1061,7 +1046,7 @@ mod tests {
         let mut ih = IntelHex::new();
         let addr = 0x1234;
         let value = 0xFF;
-        ih.buffer.insert(addr, value);
+        ih.buffer.insert(addr, vec![value]);
 
         // Act
         let res = ih.update_byte(addr - 1, value - 1);
@@ -1072,7 +1057,7 @@ mod tests {
 
     #[test]
     #[allow(clippy::cast_possible_truncation)]
-    fn test_update_buffer_slice_valid() {
+    fn test_update_slice_valid() {
         // Arrange
         let mut ih = IntelHex::new();
 
@@ -1082,23 +1067,25 @@ mod tests {
         let mut update_map: Vec<(usize, u8)> = Vec::with_capacity(length);
 
         for addr in addr_start..=addr_start + length {
-            update_map.push((addr, (addr - 1) as u8)); // construct vector with addr & new value
-            ih.buffer.insert(addr, addr as u8); // insert key-value pair into the map
+            update_map.push((addr, (addr - 1) as u8));
         }
 
+        ih.buffer
+            .insert(addr_start, update_map.iter().map(|(_, x)| *x).collect());
+
         // Act
-        let res = ih.update_buffer_slice(&update_map);
+        let res = ih.update_slice(&update_map);
 
         // Assert
         assert!(res.is_ok());
         for addr in addr_start..=addr_start + length {
-            assert_eq!(*ih.buffer.get(&addr).unwrap_or(&0), (addr - 1) as u8);
+            assert_eq!(ih.read_byte(addr).unwrap_or_default(), (addr - 1) as u8);
         }
     }
 
     #[test]
     #[allow(clippy::cast_possible_truncation)]
-    fn test_update_buffer_slice_with_gap() {
+    fn test_update_slice_with_gap() {
         // Arrange
         let mut ih = IntelHex::new();
 
@@ -1107,24 +1094,25 @@ mod tests {
 
         let mut update_map: Vec<(usize, u8)> = Vec::with_capacity(length);
 
-        for addr in addr_start..=addr_start + length {
-            update_map.push((addr * 2, (addr - 1) as u8)); // construct vector with addr & new value
-            ih.buffer.insert(addr * 2, addr as u8); // insert key-value pair into the map
+        // todo: fail
+        for addr in addr_start..addr_start + length {
+            update_map.push((addr * 2, (addr + 2) as u8));
+            ih.buffer.insert(addr * 2, vec![addr as u8]);
         }
 
         // Act
-        let res = ih.update_buffer_slice(&update_map);
+        let res = ih.update_slice(&update_map);
 
         // Assert
         assert!(res.is_ok());
-        for addr in addr_start..=addr_start + length {
-            assert_eq!(*ih.buffer.get(&(addr * 2)).unwrap_or(&0), (addr - 1) as u8);
+        for (i, addr) in (addr_start..addr_start + length).enumerate() {
+            assert_eq!(ih.read_byte(addr * 2), Some(update_map[i].1));
         }
     }
 
     #[test]
     #[allow(clippy::cast_possible_truncation)]
-    fn test_update_buffer_slice_invalid() {
+    fn test_update_slice_invalid() {
         // Arrange
         let mut ih = IntelHex::new();
 
@@ -1133,14 +1121,88 @@ mod tests {
 
         let mut update_map: Vec<(usize, u8)> = Vec::with_capacity(length);
 
+        // todo: fail
         for addr in addr_start..=addr_start + length {
-            update_map.push((addr, (addr - 1) as u8)); // construct vector with addr & new value
-            ih.buffer.insert(addr, addr as u8); // insert key-value pair into the map
+            update_map.push((addr, (addr - 1) as u8));
+            ih.buffer.insert(addr, vec![addr as u8]);
         }
         ih.buffer.pop_last(); // pop the last addr
 
         // Act
-        let res = ih.update_buffer_slice(&update_map);
+        let res = ih.update_slice(&update_map);
+
+        // Assert
+        assert!(res.is_err());
+    }
+
+    #[test]
+    #[allow(clippy::cast_possible_truncation)]
+    fn test_update_range_valid() {
+        // Arrange
+        let mut ih = IntelHex::new();
+
+        let addr_start = 16;
+        let length = 10;
+
+        let mut update_map: Vec<(usize, u8)> = Vec::with_capacity(length);
+
+        for addr in addr_start..=addr_start + length {
+            update_map.push((addr, (addr + 7) as u8));
+        }
+
+        ih.buffer
+            .insert(addr_start, update_map.iter().map(|(_, x)| *x).collect());
+
+        // Act
+        let res = ih.update_range(
+            addr_start,
+            update_map
+                .iter()
+                .map(|(_, x)| *x)
+                .collect::<Vec<u8>>()
+                .as_slice(),
+        );
+
+        // Assert
+        assert!(res.is_ok());
+        for addr in addr_start..=addr_start + length {
+            assert_eq!(ih.read_byte(addr).unwrap_or_default(), (addr + 7) as u8);
+        }
+    }
+
+    #[test]
+    #[allow(clippy::cast_possible_truncation)]
+    fn test_update_range_invalid() {
+        // Arrange
+        let mut ih = IntelHex::new();
+
+        let addr_start = 16;
+        let length = 10;
+
+        let mut update_map: Vec<(usize, u8)> = Vec::with_capacity(length);
+
+        for addr in addr_start..=addr_start + length {
+            update_map.push((addr, (addr + 7) as u8));
+        }
+
+        ih.buffer.insert(
+            addr_start,
+            update_map
+                .iter()
+                .map(|(_, x)| *x)
+                .take(length - 1) // skip last byte
+                .collect(),
+        );
+
+        // Act
+        let res = ih.update_range(
+            addr_start,
+            update_map
+                .iter()
+                .map(|(_, x)| *x)
+                .collect::<Vec<u8>>()
+                .as_slice(),
+        );
 
         // Assert
         assert!(res.is_err());
@@ -1154,9 +1216,7 @@ mod tests {
         let addr_start = 10;
         let length = 10;
 
-        for addr in addr_start..=addr_start + length {
-            ih.buffer.insert(addr, 0); // insert key-value pair into the map
-        }
+        ih.buffer.insert(addr_start, vec![0u8; 10]);
 
         // Act
         let min_addr = ih.get_min_addr();
@@ -1164,11 +1224,11 @@ mod tests {
 
         // Assert
         assert_eq!(min_addr, Some(addr_start));
-        assert_eq!(max_addr, Some(addr_start + length));
+        assert_eq!(max_addr, Some(addr_start + length - 1));
 
         // Arrange
         ih.buffer.clear();
-        ih.buffer.insert(0, 0);
+        ih.buffer.insert(0, vec![0]);
 
         // Act
         let min_addr = ih.get_min_addr();
@@ -1197,22 +1257,22 @@ mod tests {
     fn test_relocate_valid() {
         // Arrange
         let mut ih = IntelHex::new();
-        ih.buffer.insert(0xFFFF, 0xFF);
+        ih.buffer.insert(0xFFFF, vec![0xFF]);
 
         // Act
         let res = ih.relocate(0x0);
 
         // Assert
         assert!(res.is_ok());
-        assert_eq!(ih.buffer.get(&0x0), Some(&0xFF));
+        assert_eq!(ih.buffer.get(&0x0), Some(&vec![0xFFu8]));
     }
 
     #[test]
     fn test_relocate_invalid() {
         // Arrange
         let mut ih = IntelHex::new();
-        ih.buffer.insert(0x0000, 0xFF); // min addr
-        ih.buffer.insert(0xFFFF, 0xFF); // max addr
+        ih.buffer.insert(0x0000, vec![0xFF]); // min addr
+        ih.buffer.insert(0xFFFF, vec![0xFF]); // max addr
 
         // Act
         let res = ih.relocate(u32::MAX as usize);
@@ -1229,6 +1289,7 @@ mod tests {
 
 // =====================  BENCH ACCESS FOR PRIVATE FUNCTIONS  =====================
 
+#[allow(clippy::items_after_test_module)]
 impl IntelHex {
     #[cfg(feature = "benchmarking")]
     pub fn bench_priv_parse(ih: &mut Self, raw_bytes: &[u8]) {
