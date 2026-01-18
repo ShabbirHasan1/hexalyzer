@@ -19,7 +19,7 @@ echo "Done! File saved to: $(pwd)/build/$HEX_FILENAME"
 # ================ SPARSE MEMORY FILE ================
 
 BS=4096
-MERGED_HEX_NAME="sparse_data.hex"
+MERGED_HEX_NAME="random_data_sparse.hex"
 
 echo "Generating random bin files..."
 # Generate first chunk

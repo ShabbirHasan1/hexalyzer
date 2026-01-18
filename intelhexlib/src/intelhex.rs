@@ -2,7 +2,7 @@
 //! managing Intel HEX data.
 //!
 //! It supports parsing HEX files into an internal sparse memory representation using
-//! a `BTreeMap`, allowing for efficient manipulation of non-contiguous data blocks.
+//! a `BTreeMap`, allowing for efficient manipulation of non-contiguous data chunks.
 //! The module also provides utilities for binary file interop, memory relocation,
 //! and generating valid Intel HEX output with configurable record sizes.
 
@@ -26,7 +26,7 @@ pub struct IntelHex {
     /// Offset of the linear address segment
     offset: usize,
     /// Data buffer of the Intel HEX file.
-    /// Maps start address of each contiguous data block to a vector of bytes.
+    /// Maps start address of each contiguous data chunk to a vector of bytes.
     buffer: BTreeMap<usize, Vec<u8>>,
 }
 
@@ -163,10 +163,10 @@ impl IntelHex {
                         match (can_append, can_prepend) {
                             // BRIDGE: [prev][new][next] -> [prev_merged]
                             (true, true) => {
-                                // Remove the 'next' block from the buffer and get its data
+                                // Remove the 'next' chunk from the buffer and get its data
                                 let mut next_data =
                                     self.buffer.remove(&new_end_addr).unwrap_or_default();
-                                // Get the 'prev' block and append both 'new' and 'next' data to it.
+                                // Get the 'prev' chunk and append both 'new' and 'next' data to it.
                                 // Error cases are not handled here as they were checked above.
                                 if let Some(prev_data) =
                                     self.buffer.get_mut(&prev_key.unwrap_or_default())
@@ -177,7 +177,7 @@ impl IntelHex {
                             }
                             // APPEND: [prev][new]
                             (true, false) => {
-                                // Get the 'prev' block and append 'new' data to it.
+                                // Get the 'prev' chunk and append 'new' data to it.
                                 // Error cases are not handled here as they were checked above.
                                 if let Some(prev_data) =
                                     self.buffer.get_mut(&prev_key.unwrap_or_default())
@@ -187,10 +187,10 @@ impl IntelHex {
                             }
                             // PREPEND: [new][next]
                             (false, true) => {
-                                // Remove the 'next' block from the buffer and get its data
+                                // Remove the 'next' chunk from the buffer and get its data
                                 let mut next_data =
                                     self.buffer.remove(&new_end_addr).unwrap_or_default();
-                                // Append 'next' data to the 'new' block and insert it into the buffer
+                                // Append 'next' data to the 'new' chunk and insert it into the buffer
                                 current_data.append(&mut next_data);
                                 self.buffer.insert(addr, current_data);
                             }
@@ -380,12 +380,12 @@ impl IntelHex {
 
         let mut curr_high_addr = 0u16;
 
-        for (&block_start_addr, data) in &self.buffer {
-            let mut block_offset = 0;
+        for (&chunk_start_addr, data) in &self.buffer {
+            let mut chunk_offset = 0;
 
             // Iterate over data chunk
-            while block_offset < data.len() {
-                let addr = block_start_addr + block_offset;
+            while chunk_offset < data.len() {
+                let addr = chunk_start_addr + chunk_offset;
 
                 // Split address into low and high
                 let high_addr = (addr >> 16) as u16;
@@ -409,17 +409,17 @@ impl IntelHex {
                 let remaining_in_segment = 0x10000 - low_addr as usize;
                 let chunk_size = std::cmp::min(
                     self.max_payload_size,
-                    std::cmp::min(data.len() - block_offset, remaining_in_segment),
+                    std::cmp::min(data.len() - chunk_offset, remaining_in_segment),
                 );
 
                 let record = Record::create(
                     low_addr,
                     RecordType::Data,
-                    &data[block_offset..block_offset + chunk_size],
+                    &data[chunk_offset..chunk_offset + chunk_size],
                 )?;
                 writeln!(writer, "{record}")?;
 
-                block_offset += chunk_size;
+                chunk_offset += chunk_size;
             }
         }
 
@@ -469,11 +469,11 @@ impl IntelHex {
         // Get the starting point
         let mut current_addr = self.get_min_addr().unwrap_or(0);
 
-        // Iterate over contiguous blocks of data
-        for (&block_start_addr, data) in &self.buffer {
-            // Fill the gap between the last written byte and the start of this block
-            if block_start_addr > current_addr {
-                let gap_size = block_start_addr - current_addr;
+        // Iterate over contiguous chunks of data
+        for (&chunk_start_addr, data) in &self.buffer {
+            // Fill the gap between the last written byte and the start of this chunk
+            if chunk_start_addr > current_addr {
+                let gap_size = chunk_start_addr - current_addr;
 
                 // Use a small buffer to write gaps. Limit the buffer to 4096 KB as it is the
                 // default / typical page size of most OS - more efficient + avoids large heap allocations.
@@ -487,11 +487,11 @@ impl IntelHex {
                 }
             }
 
-            // Write the entire contiguous block at once
+            // Write the entire contiguous chunk at once
             writer.write_all(data)?;
 
             // Advance the tracking address
-            current_addr = block_start_addr + data.len();
+            current_addr = chunk_start_addr + data.len();
         }
 
         writer.flush()?;
